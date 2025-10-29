@@ -1,0 +1,64 @@
+experiment:
+  name: distributed_baseline
+  output_dir: artifacts/runs
+  tags:
+    mode: distributed
+
+data:
+  dataset_name: synthetic
+  batch_size: 128
+  num_workers: 8
+  preprocessing:
+    num_features: 64
+    num_classes: 8
+    seed: 42
+
+model:
+  name: transformer_classifier
+  parameters:
+    input_dim: 64
+    num_heads: 8
+    num_layers: 4
+    ff_dim: 256
+    num_classes: 8
+    dropout: 0.1
+
+training:
+  epochs: 20
+  log_every_n_steps: 10
+  gradient_clip_norm: 1.0
+  optimizer:
+    name: adamw
+    lr: 0.0003
+    weight_decay: 0.01
+  scheduler:
+    name: cosine
+    args:
+      t_max: 20
+      early_stop_patience: 6
+  distributed:
+    backend: nccl
+    world_size: 4
+    num_nodes: 2
+    node_rank: 0
+    master_addr: 10.0.0.1
+    master_port: 23456
+    gradient_accumulation_steps: 2
+    mixed_precision: true
+    seed: 999
+  checkpoint:
+    dir: artifacts/checkpoints/distributed
+    monitor: val_loss
+    mode: min
+    save_top_k: 5
+    save_every_n_epochs: 1
+  logging:
+    level: INFO
+    log_dir: logs/distributed
+    tensorboard: true
+
+evaluation:
+  metrics: [accuracy, f1, auroc]
+  batch_size: 256
+  save_predictions: true
+  output_dir: artifacts/evaluation/distributed

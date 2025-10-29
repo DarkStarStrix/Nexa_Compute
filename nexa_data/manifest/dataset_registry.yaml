@@ -1,0 +1,4 @@
+synthetic:
+  module: nexa_compute.data.dataset
+  factory: DatasetFactory
+  description: Synthetic classification dataset for smoke testing

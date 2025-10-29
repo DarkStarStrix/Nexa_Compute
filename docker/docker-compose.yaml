@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  trainer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/workspace
+    working_dir: /workspace
+    environment:
+      - PYTHONPATH=/workspace/src
+    command: ["python", "scripts/cli.py", "train", "--config", "configs/default.yaml"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

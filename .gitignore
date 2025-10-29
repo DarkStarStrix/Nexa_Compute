@@ -1,0 +1,56 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.so
+*.dylib
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+*.venv/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Logs, artifacts, checkpoints
+logs/
+artifacts/
+mlruns/
+runs/logs/
+runs/checkpoints/
+*.log
+*.pt
+*.ckpt
+*.tar.gz
+*.out
+
+# Data directories (keep metadata under version control separately)
+data/raw/
+data/processed/
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Coverage & test reports
+.coverage
+coverage.xml
+htmlcov/
+
+# Local overrides
+.env.local
+.envrc

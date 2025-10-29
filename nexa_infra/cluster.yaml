@@ -1,0 +1,17 @@
+name: nexa-default
+provider: aws
+region: us-west-2
+node_group:
+  instance_type: g5.4xlarge
+  count: 4
+  spot: false
+  disk_size_gb: 500
+metadata:
+  tags:
+    owner: ml-platform
+    project: nexa-compute
+  networking:
+    vpc_id: vpc-xxxxxxxx
+    subnets:
+      - subnet-aaaaaaaa
+      - subnet-bbbbbbbb
