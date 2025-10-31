@@ -54,3 +54,8 @@ htmlcov/
 # Local overrides
 .env.local
 .envrc
+
+# Shell scripts
+*.sh
+*.bash
+*.zsh

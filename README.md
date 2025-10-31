@@ -1,80 +1,130 @@
-# Nexa Compute Training Platform
+# NexaCompute Infrastructure – Final Runbook
 
-A modular framework for running large-scale ML training jobs with reproducible workflows, distributed execution, and experiment tracking. The repository bundles data ingestion, model factories, training orchestration, evaluation, and operational tooling.
+This repository now contains a reproducible GPU training stack with:
 
-## Key Features
-- Declarative YAML configuration validated via Pydantic schemas.
-- Data pipeline abstraction with dataset registry and metadata logging.
-- Model registry with reference MLP, ResNet, and Transformer architectures.
-- Trainer with callbacks (logging, checkpointing, early stopping) and AMP support.
-- Evaluation suite with rich metrics and artifact export.
-- Automation scripts for environment setup, data prep, training, evaluation, tuning, and packaging.
-- Docker + distributed launch helpers for scaling to multi-node clusters.
+- Hardened bootstrap script for fresh GPU nodes (`nexa_infra/Boostrap.sh`).
+- Configurable Hugging Face trainer with telemetry, smoothing, checkpoint packaging, and AWS S3 backup (`scripts/test_hf_train.py`).
+- Helper scripts for GPU monitoring, torchrun launches, deployment promotion, run analysis, and artifact cleanup.
+- Infrastructure summary command (`orchestrate.py summary`) to capture environment fingerprints.
 
-## Repository Layout
-```
-nexa-compute/
-├── orchestrate.py         # High-level CLI entrypoint
-├── nexa_infra/            # Provisioning, launch, and cost tracking modules
-├── nexa_data/             # Data prep/augmentation/distillation utilities
-├── nexa_train/            # Training orchestration, configs, sweeps, optim tooling
-├── nexa_eval/             # Evaluation + reporting stack
-├── nexa_feedback/         # Weakness analysis & feedback generation
-├── nexa_ui/               # Leaderboard + dashboard assets
-├── runs/                  # Manifests, logs, checkpoints
-├── docs/                  # Architecture, storage, schema, and safety docs
-├── src/nexa_compute/      # Core library (config, data, models, training, eval)
-├── scripts/               # Supporting automation scripts
-├── tests/                 # Unit & integration tests
-└── pyproject.toml         # Packaging metadata
-```
+The sections below describe how to bring up a new node, run long jobs, ship artifacts, and shut everything down cleanly.
 
-## Quick Start
-1. **Create environment**
+---
+
+## 1. Bootstrap a Fresh GPU Node
+
+1. SSH into the machine as root.
+2. Copy `nexa_infra/Boostrap.sh` and execute:
    ```bash
-   uv venv .venv --python 3.11
-   source .venv/bin/activate
-   uv pip install -r requirements.txt
+   bash nexa_infra/Boostrap.sh
    ```
-2. **Provision & prepare data (optional)**
-   ```bash
-   python orchestrate.py provision --bootstrap
-   python orchestrate.py prepare-data --config nexa_train/configs/baseline.yaml
-   ```
-3. **Run smoke training**
-   ```bash
-   python orchestrate.py launch --config nexa_train/configs/baseline.yaml
-   ```
-4. **Evaluate checkpoint**
-   ```bash
-   python orchestrate.py evaluate --config nexa_train/configs/baseline.yaml
-   ```
+   This installs base packages, Tailscale, AWS CLI, pynvml, environment exports, and creates durable storage paths.
+3. Log out and back in (or `source ~/.bashrc`) so the new environment variables apply, including:
+   - `NEXA_SCRATCH`, `NEXA_DURABLE`, `NEXA_SHARED`, `NEXA_REPO`
+   - NCCL defaults (`NCCL_DEBUG=INFO`, `NCCL_IB_DISABLE=1`, `NCCL_P2P_DISABLE=0`)
+   - Tokenizer/OMP envs (`TOKENIZERS_PARALLELISM=false`, `OMP_NUM_THREADS=8`)
+   - Default S3 destination `NEXA_S3_PREFIX=s3://nexacompute/ML_Checkpoints`
 
-## Make Targets
-```
-make install       # install dependencies into current env
-make lint          # run static analysis (ruff + mypy)
-make test          # run unit tests
-make train         # run default training config
-make evaluate      # run evaluation for default config
-make package       # create tarball with exported model artifacts
-```
+> **AWS Credentials**: Configure `aws configure` or attach an IAM role so `aws s3 sync` can upload checkpoints.
 
-## Docker
-```
-docker build -t nexa-compute:latest -f docker/Dockerfile .
-docker run --gpus all -v $(pwd):/workspace nexa-compute:latest python scripts/cli.py train --config configs/default.yaml
+---
+
+## 2. Run a Training Job
+
+All jobs use the configurable runner:
+
+```bash
+./scripts/run_training.sh \
+  --model roberta-base \
+  --dataset glue --dataset-config sst2 \
+  --train-samples 20000 --eval-samples 5000 \
+  --batch-size 16 --grad-accumulation 2 \
+  --epochs 4 --learning-rate 1e-5 \
+  --allow-tf32 --telemetry-interval 5 \
+  --tags infra-stable
 ```
 
-## Distributed Launch (example)
-```
-bash scripts/launch_ddp.sh --config configs/distributed.yaml --nodes 2 --gpus 4
+Highlights:
+
+- Exports `WANDB_API_KEY`, `PYTHONPATH=/workspace/nexa_compute/src`, `CUDA_VISIBLE_DEVICES` (default 0), and NCCL envs.
+- Supports additional flags (`--fp16`, `--bf16`, `--s3-uri`, logging intervals, etc.).
+- On completion it writes a manifest (`runs/manifests/<run_id>.json`), syncs the best checkpoint to durable storage, prunes old checkpoints, and mirrors `final/` to S3 (`s3://nexacompute/ML_Checkpoints/<run_id>`).
+
+For multi-GPU or H100 jobs, use the torchrun wrapper:
+
+```bash
+./scripts/torchrun_wrapper.sh scripts/test_hf_train.py [args...]
 ```
 
-## Experiment Tracking
-- TensorBoard logs saved under `logs/`.
-- MLflow-ready metadata (set `MLFLOW_TRACKING_URI` env var and the pipeline will auto-log runs).
+---
 
-## Contributing
-- Follow style checks via `make lint` before submitting PRs.
-- Update `Spec.md` and `docs/` when adding new functionality.
+## 3. Telemetry & Monitoring
+
+- **GPU Utilisation**: run `./scripts/gpu_monitor.py --interval 5` in another tmux pane.
+- **In-run metrics**: the training script logs smoothed loss, raw loss, GPU memory, and W&B run IDs.
+- **NVML Snapshots**: manifests capture pre/post GPU utilisation.
+
+---
+
+## 4. Packaging, Deployment, Cleanup
+
+- **Package for deployment**:
+  ```bash
+  python3 scripts/package_for_deployment.py <run_id>
+  ```
+- **Promote to deploy mount (e.g. `/mnt/nexa_durable/deploy/current_model`)**:
+  ```bash
+  python3 scripts/deploy.py <run_id>
+  ```
+- **Summarise runs** (average loss/runtime, etc.):
+  ```bash
+  python3 scripts/analyze_runs.py
+  ```
+- **Prune/archive old checkpoints**:
+  ```bash
+  python3 scripts/cleanup.py --days 7 --prune-size +2G
+  ```
+
+---
+
+## 5. Reproducibility Snapshot
+
+After any meaningful run, capture the system fingerprint:
+
+```bash
+python3 orchestrate.py summary
+cat runs/manifests/infra_report.json
+```
+
+This records Python/Torch/CUDA versions, NCCL envs, GPU inventory, and existing manifests. Include it with experiment notes.
+
+---
+
+## 6. Shutdown Workflow
+
+1. Cancel tmux training (`tmux send-keys -t train C-c`).
+2. Run `python3 orchestrate.py summary` and `python3 scripts/cleanup.py` if desired.
+3. Package/deploy any final checkpoints.
+4. `aws s3 ls s3://nexacompute/ML_Checkpoints/` to verify uploads.
+5. Shut down node (provider-specific, or `shutdown -h now`).
+
+---
+
+### Directory Overview
+
+| Path | Purpose |
+|------|---------|
+| `nexa_infra/Boostrap.sh` | Node bootstrap script |
+| `scripts/test_hf_train.py` | Main training runner |
+| `scripts/run_training.sh` | Helper wrapper for env + runner |
+| `scripts/gpu_monitor.py` | NVML telemetry |
+| `scripts/package_for_deployment.py` | Bundle checkpoints/manifests |
+| `scripts/deploy.py` | Promote packaged runs |
+| `scripts/analyze_runs.py` | Manifests analytics |
+| `scripts/cleanup.py` | Prune/archive checkpoints |
+| `runs/manifests/` | Per-run manifests + infra summaries |
+| `docs/` | Post-mortems, storage policy, cost model, etc. |
+
+---
+
+Tag this state as `infra-stable-v1` once satisfied. Future work can iterate on functionality (multi-node scheduling, advanced telemetry, cost dashboards) without revisiting scaffolding.
