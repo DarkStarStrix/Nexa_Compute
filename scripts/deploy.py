@@ -5,21 +5,30 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 from pathlib import Path
 
+import sys
+
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
-if str(SRC) not in os.sys.path:
-    os.sys.path.insert(0, str(SRC))
 
-from nexa_compute.utils.storage import get_storage  # type: ignore
+
+def setup_paths() -> None:
+    """Ensure project modules can be imported."""
+
+    if str(SRC) not in sys.path:
+        sys.path.insert(0, str(SRC))
+
+
+setup_paths()
 
 DEPLOY_ROOT = Path("/mnt/nexa_durable/deploy")
 
 
 def parse_args() -> argparse.Namespace:
+    """Return CLI parameters for promotion of a packaged model."""
+
     parser = argparse.ArgumentParser(description="Deploy a trained NexaCompute model")
     parser.add_argument("run_id", type=str, help="Run identifier to promote")
     parser.add_argument("--artifact-root", type=Path, default=Path("artifacts/deployment"), help="Packaged artifacts directory")
@@ -27,7 +36,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def load_manifest(package_dir: Path) -> dict:
+    """Return deployment metadata if present."""
+
+    manifest_path = package_dir / "manifest.json"
+    return json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+
+
+def deploy_checkpoint(source_dir: Path, target_root: Path, manifest: dict) -> None:
+    """Copy packaged checkpoint to the deployment root and persist manifest."""
+
+    target_root.mkdir(parents=True, exist_ok=True)
+    target_checkpoint = target_root / "current_model"
+    if target_checkpoint.exists():
+        shutil.rmtree(target_checkpoint)
+    shutil.copytree(source_dir, target_checkpoint)
+    (target_root / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    print(f"✅ Deployed checkpoint to {target_checkpoint}")
+
+
 def main() -> None:
+    """Promote a packaged run to the deployment target."""
+
     args = parse_args()
     package_dir = args.artifact_root / args.run_id
     if not package_dir.exists():
@@ -37,18 +67,8 @@ def main() -> None:
     if not checkpoint_dir.exists():
         raise FileNotFoundError(f"Checkpoint directory missing: {checkpoint_dir}")
 
-    manifest_path = package_dir / "manifest.json"
-    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-
-    target_root = args.deploy_root
-    target_root.mkdir(parents=True, exist_ok=True)
-    target_checkpoint = target_root / "current_model"
-    if target_checkpoint.exists():
-        shutil.rmtree(target_checkpoint)
-    shutil.copytree(checkpoint_dir, target_checkpoint)
-
-    (target_root / "manifest.json").write_text(json.dumps(manifest, indent=2))
-    print(f"✅ Deployed {args.run_id} to {target_checkpoint}")
+    manifest = load_manifest(package_dir)
+    deploy_checkpoint(checkpoint_dir, args.deploy_root, manifest)
 
 
 if __name__ == "__main__":

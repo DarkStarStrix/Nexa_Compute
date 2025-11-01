@@ -4,18 +4,25 @@ from __future__ import annotations
 
 import json
 import tarfile
+import sys
 from pathlib import Path
 from typing import List, Optional
 
 import torch
 import typer
 
-import sys
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
+
+
+def setup_paths() -> None:
+    """Ensure project modules are importable from scripts."""
+
+    if str(SRC_DIR) not in sys.path:
+        sys.path.insert(0, str(SRC_DIR))
+
+
+setup_paths()
 
 from nexa_compute.config import load_config  # type: ignore  # noqa: E402
 from nexa_compute.config.schema import TrainingConfig  # type: ignore  # noqa: E402
@@ -29,6 +36,8 @@ app = typer.Typer(help="Nexa Compute orchestration CLI")
 
 
 def _load_training_config(config_path: Path, overrides: Optional[List[str]]) -> TrainingConfig:
+    """Load and return a training configuration with optional overrides."""
+
     return load_config(config_path, overrides=overrides or [])
 
 
@@ -37,6 +46,8 @@ def prepare_data(
     config: Path = typer.Option(..., exists=True, help="Path to YAML config"),
     override: Optional[List[str]] = typer.Option(None, "--override", help="Override key=value pairs"),
 ) -> None:
+    """Materialize dataset metadata for a given configuration."""
+
     cfg = _load_training_config(config, override)
     pipeline = DataPipeline(cfg.data)
     metadata_path = pipeline.materialize_metadata(cfg.output_directory())
@@ -49,6 +60,8 @@ def train(
     override: Optional[List[str]] = typer.Option(None, "--override", help="Override key=value pairs"),
     disable_eval: bool = typer.Option(False, help="Skip evaluation after training"),
 ) -> None:
+    """Run the training pipeline with optional evaluation."""
+
     pipeline = TrainingPipeline.from_config_file(config, overrides=override or [])
     artifacts = pipeline.run(enable_evaluation=not disable_eval)
     typer.echo(f"Run directory: {artifacts.run_dir}")
@@ -64,6 +77,8 @@ def evaluate(
     checkpoint: Optional[Path] = typer.Option(None, help="Path to checkpoint (.pt)"),
     override: Optional[List[str]] = typer.Option(None, "--override", help="Override key=value pairs"),
 ) -> None:
+    """Evaluate a model against the validation pipeline."""
+
     cfg = _load_training_config(config, override)
     pipeline = DataPipeline(cfg.data)
     dataloader = pipeline.dataloader("validation", batch_size=cfg.evaluation.batch_size)
@@ -84,6 +99,8 @@ def tune(
     max_trials: int = typer.Option(5, help="Number of random search trials"),
     override: Optional[List[str]] = typer.Option(None, "--override", help="Base overrides"),
 ) -> None:
+    """Run random-search hyperparameter tuning using existing config."""
+
     from .hyperparameter_search import random_search  # type: ignore
 
     cfg = _load_training_config(config, override)
@@ -98,6 +115,8 @@ def package(
     output: Path = typer.Option(Path("artifacts/package"), help="Output directory"),
     override: Optional[List[str]] = typer.Option(None, "--override", help="Override key=value pairs"),
 ) -> None:
+    """Bundle model weights and config into an exportable artifact."""
+
     cfg = _load_training_config(config, override)
     run_dir = cfg.output_directory()
     output.mkdir(parents=True, exist_ok=True)

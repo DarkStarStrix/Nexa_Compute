@@ -20,6 +20,8 @@ def preprocess(
     test_fraction: float = typer.Option(0.1, min=0.0, max=0.5),
     seed: int = typer.Option(42),
 ) -> None:
+    """Shuffle and split the raw dataset into train/validation/test parquet files."""
+
     output_dir.mkdir(parents=True, exist_ok=True)
     if not raw_path.exists():
         typer.echo("Raw dataset missing, generating synthetic placeholder...")
@@ -50,6 +52,8 @@ def preprocess(
 
 
 def _generate_synthetic(path: Path, *, seed: int) -> None:
+    """Create a synthetic dataset for local development."""
+
     rng = np.random.default_rng(seed)
     num_samples = 5000
     features = rng.normal(size=(num_samples, 4))

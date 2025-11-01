@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from .slurm import prepare_slurm_batch
 from .utils import ClusterConfig, run_command
 
 
@@ -18,6 +19,16 @@ def provision_cluster(manifest: Path, bootstrap_tailscale: bool = False) -> None
     if bootstrap_tailscale:
         _bootstrap_tailscale()
     print("[nexa-infra] Cluster manifest recorded")
+
+
+def create_slurm_sweep(config: Path, submit: bool = False) -> None:
+    """Materialize Slurm sweep artifacts from a YAML description."""
+
+    artifacts = prepare_slurm_batch(config, submit=submit)
+    print(f"[nexa-infra] Slurm spec: {artifacts.spec_path}")
+    print(f"[nexa-infra] Slurm script: {artifacts.script_path}")
+    if artifacts.cost_manifest is not None:
+        print(f"[nexa-infra] Cost estimate stored at {artifacts.cost_manifest}")
 
 
 def _bootstrap_tailscale() -> None:

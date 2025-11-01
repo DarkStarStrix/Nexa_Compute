@@ -18,13 +18,14 @@ def tail(
     refresh_seconds: float = typer.Option(2.0, help="Polling interval"),
     key: Optional[str] = typer.Option(None, help="Filter by metric key"),
 ) -> None:
+    """Continuously print structured log entries from the training run."""
+
     log_path = log_dir / "train.log"
     if not log_path.exists():
         typer.echo(f"Log file not found: {log_path}")
         raise typer.Exit(code=1)
     typer.echo(f"Tailing {log_path} (Ctrl+C to stop)")
     with log_path.open("r", encoding="utf-8") as handle:
-        # Seek to end
         handle.seek(0, 2)
         try:
             while True:

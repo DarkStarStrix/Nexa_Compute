@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Callable, Dict
+from typing import Callable, Dict, Iterable
 
 
-BackendFn = Callable[[list[str] | None], None]
+BackendFn = Callable[[dict | None], dict]
 
 _BACKEND_CACHE: Dict[str, BackendFn] = {}
 
@@ -23,9 +23,13 @@ def get_backend(name: str) -> BackendFn:
 
 
 _BACKEND_SPECS: Dict[str, tuple[str, str]] = {
-    "hf": ("nexa_train.backends.hf_runner", "main"),
+    "hf": ("nexa_train.backends.hf", "run"),
 }
 
 
-__all__ = ["get_backend", "BackendFn"]
+def list_backends() -> Iterable[str]:
+    return sorted(_BACKEND_SPECS.keys())
+
+
+__all__ = ["get_backend", "BackendFn", "list_backends"]
 

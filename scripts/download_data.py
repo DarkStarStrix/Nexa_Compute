@@ -18,6 +18,8 @@ def download(
     output_dir: Path = typer.Option(Path("data/raw"), help="Download directory"),
     filename: Optional[str] = typer.Option(None, help="Optional file name"),
 ) -> None:
+    """Download a file to the local dataset directory and print checksum."""
+
     output_dir.mkdir(parents=True, exist_ok=True)
     target_name = filename or Path(url).name
     target_path = output_dir / target_name
@@ -28,6 +30,8 @@ def download(
 
 
 def _sha256(path: Path) -> str:
+    """Return the SHA256 checksum of the provided file."""
+
     hasher = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(8192), b""):

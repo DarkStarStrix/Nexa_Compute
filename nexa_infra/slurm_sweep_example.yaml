@@ -1,0 +1,42 @@
+job:
+  name: science-train
+  partition: gpu
+  time: "08:00:00"
+  nodes: 1
+  gpus_per_node: 4
+  cpus_per_task: 12
+  array_parallelism: 2
+  output_dir: /workspace/logs/slurm
+  gpu_type: rtx_5090
+  cost_per_gpu_hour: 3.25
+  modules:
+    - cuda/12.4
+    - python/3.11
+  env:
+    NEXA_SCRATCH: /workspace/tmp
+    NEXA_DURABLE: /mnt/nexa_durable
+    NCCL_SOCKET_IFNAME: eth0
+
+sweep:
+  base_args:
+    - --dataset glue
+    - --dataset-config sst2
+    - --epochs 2
+  parameters:
+    learning_rate: [2e-5, 1e-5]
+    batch_size: [8, 16]
+    grad_accumulation: [1, 2]
+  env:
+    WANDB_PROJECT: nexa-compute
+    WANDB_ENTITY: nexacompute
+  wandb_group: science_sweep_v1
+  tags:
+    - backend:hf
+
+launcher:
+  type: torchrun
+  script: scripts/test_hf_train.py
+  nproc_per_node: 4
+  extra_args:
+    - --standalone
+

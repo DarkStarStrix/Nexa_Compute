@@ -19,6 +19,8 @@ def sync(
     profile: Optional[str] = typer.Option(None, help="AWS CLI profile to use"),
     dry_run: bool = typer.Option(False, help="Show actions without performing download"),
 ) -> None:
+    """Mirror objects from S3 to the local filesystem using the AWS CLI."""
+
     destination.mkdir(parents=True, exist_ok=True)
     s3_uri = f"s3://{bucket}/{prefix}" if prefix else f"s3://{bucket}"
     cmd = ["aws", "s3", "sync", s3_uri, str(destination)]

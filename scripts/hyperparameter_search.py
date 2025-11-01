@@ -12,15 +12,21 @@ from nexa_compute.orchestration import TrainingPipeline
 
 
 def _sample_learning_rate(base_lr: float) -> float:
+    """Sample a learning rate around the provided base value on a log scale."""
+
     log_lr = math.log10(base_lr)
     return 10 ** random.uniform(log_lr - 1, log_lr + 1)
 
 
 def _sample_dropout(base: float) -> float:
+    """Sample dropout with Gaussian noise while keeping values in [0, 0.7]."""
+
     return float(min(0.7, max(0.0, random.gauss(base, 0.1))))
 
 
 def random_search(config: TrainingConfig, trials: int = 5) -> List[Dict[str, object]]:
+    """Run a random search over learning rate and dropout hyperparameters."""
+
     results: List[Dict[str, object]] = []
     for idx in range(trials):
         trial_cfg = config.model_copy(deep=True)
