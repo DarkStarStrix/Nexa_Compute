@@ -539,4 +539,3 @@ def main(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     main(parse_args())
-
