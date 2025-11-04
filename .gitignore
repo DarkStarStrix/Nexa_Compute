@@ -59,3 +59,14 @@ htmlcov/
 *.sh
 *.bash
 *.zsh
+
+# Text files
+*.txt
+*.csv
+*.json
+*.yaml
+*.yml
+*.jsonl
+*.jsonl.zst
+*.jsonl.zstd
+*.jsonl.zstd.zst

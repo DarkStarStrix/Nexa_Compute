@@ -1,130 +1,446 @@
-# NexaCompute Infrastructure – Final Runbook
+# NexaCompute
 
-This repository now contains a reproducible GPU training stack with:
-
-- Hardened bootstrap script for fresh GPU nodes (`nexa_infra/Boostrap.sh`).
-- Configurable Hugging Face trainer with telemetry, smoothing, checkpoint packaging, and AWS S3 backup (`scripts/test_hf_train.py`).
-- Helper scripts for GPU monitoring, torchrun launches, deployment promotion, run analysis, and artifact cleanup.
-- Infrastructure summary command (`orchestrate.py summary`) to capture environment fingerprints.
-
-The sections below describe how to bring up a new node, run long jobs, ship artifacts, and shut everything down cleanly.
+**ML Lab in a Box** — A self-contained, production-grade machine learning research and development platform for rapid experimentation, model training, and knowledge distillation.
 
 ---
 
-## 1. Bootstrap a Fresh GPU Node
+## Overview
 
-1. SSH into the machine as root.
-2. Copy `nexa_infra/Boostrap.sh` and execute:
-   ```bash
-   bash nexa_infra/Boostrap.sh
-   ```
-   This installs base packages, Tailscale, AWS CLI, pynvml, environment exports, and creates durable storage paths.
-3. Log out and back in (or `source ~/.bashrc`) so the new environment variables apply, including:
-   - `NEXA_SCRATCH`, `NEXA_DURABLE`, `NEXA_SHARED`, `NEXA_REPO`
-   - NCCL defaults (`NCCL_DEBUG=INFO`, `NCCL_IB_DISABLE=1`, `NCCL_P2P_DISABLE=0`)
-   - Tokenizer/OMP envs (`TOKENIZERS_PARALLELISM=false`, `OMP_NUM_THREADS=8`)
-   - Default S3 destination `NEXA_S3_PREFIX=s3://nexacompute/ML_Checkpoints`
+NexaCompute is a complete machine learning platform that packages everything you need to run sophisticated ML workflows—from data preparation to model deployment—in a single, reproducible system. Designed for researchers and practitioners who need to iterate quickly on ephemeral GPU infrastructure while maintaining rigorous reproducibility and cost awareness.
 
-> **AWS Credentials**: Configure `aws configure` or attach an IAM role so `aws s3 sync` can upload checkpoints.
+**Core Philosophy:** Everything runs on disposable compute, with durable results and complete lineage tracking. Each experiment is fully reproducible, cost-tracked, and automatically documented.
+
+### What Makes It Different
+
+- **Complete ML Pipeline:** Data preparation, training, distillation, evaluation, and feedback loops in one platform
+- **Infrastructure-Agnostic:** Works seamlessly across GPU providers (Lambda Labs, CoreWeave, RunPod, AWS, etc.)
+- **Reproducible by Design:** Every run generates manifests with complete provenance
+- **Cost-Aware:** Built-in cost tracking and optimization
+- **Production-Ready:** Battle-tested infrastructure and operational best practices
 
 ---
 
-## 2. Run a Training Job
+## Key Features
 
-All jobs use the configurable runner:
+### 🔬 **Knowledge Distillation Pipeline**
+Transform raw data into high-quality training datasets via teacher-student distillation:
+- Automated teacher completion collection
+- Quality filtering and human-in-the-loop inspection
+- SFT-ready dataset packaging
+- Complete workflow from prompts to trained models
 
-```bash
-./scripts/run_training.sh \
-  --model roberta-base \
-  --dataset glue --dataset-config sst2 \
-  --train-samples 20000 --eval-samples 5000 \
-  --batch-size 16 --grad-accumulation 2 \
-  --epochs 4 --learning-rate 1e-5 \
-  --allow-tf32 --telemetry-interval 5 \
-  --tags infra-stable
+### 📊 **Data Management**
+- Organized storage hierarchy (`data/raw/` → `data/processed/`)
+- Query interface for reliable data access
+- Dataset versioning and manifest tracking
+- Support for JSONL, Parquet, and compressed formats
+- Automated feedback loops for data improvement
+
+### 🚀 **Training & Evaluation**
+- Distributed training with DDP support
+- HuggingFace integration
+- Automatic checkpointing and resume
+- Evaluation with LLM-as-judge and rubric-based scoring
+- Real-time monitoring and telemetry
+
+### 📈 **Visualization & Dashboards**
+- Streamlit-based UI for data exploration
+- Evaluation leaderboards
+- Training statistics visualization
+- Distillation data inspection
+
+### 🔧 **Infrastructure Orchestration**
+- One-command cluster provisioning
+- Automated job launching and management
+- Cost tracking and reporting
+- Multi-provider support (Lambda, CoreWeave, AWS, etc.)
+
+---
+
+## Architecture
+
+NexaCompute is organized into **six distinct modules**, each serving a specific purpose in the ML pipeline:
+
+```
+nexa_compute/
+├── nexa_data/       # Data preparation, analysis, and feedback
+├── nexa_distill/    # Knowledge distillation pipeline
+├── nexa_train/      # Model training and fine-tuning
+├── nexa_eval/       # Evaluation and benchmarking
+├── nexa_ui/         # Visualization and dashboards
+└── nexa_infra/      # Infrastructure and orchestration
 ```
 
-Highlights:
+Each module is self-contained with clear boundaries, communicating via versioned data artifacts rather than direct imports. This design ensures maintainability, testability, and extensibility.
 
-- Exports `WANDB_API_KEY`, `PYTHONPATH=/workspace/nexa_compute/src`, `CUDA_VISIBLE_DEVICES` (default 0), and NCCL envs.
-- Supports additional flags (`--fp16`, `--bf16`, `--s3-uri`, logging intervals, etc.).
-- On completion it writes a manifest (`runs/manifests/<run_id>.json`), syncs the best checkpoint to durable storage, prunes old checkpoints, and mirrors `final/` to S3 (`s3://nexacompute/ML_Checkpoints/<run_id>`).
+**See [Architecture Documentation](docs/Overview_of_Project/ARCHITECTURE.md) for complete details.**
 
-For multi-GPU or H100 jobs, use the torchrun wrapper:
+---
+
+## Quick Start
+
+### Turn-Key Setup (Recommended)
+
+**1. Configure API Keys**
+```bash
+cp .env.example .env
+# Edit .env with your API keys (OpenAI, HuggingFace, W&B, etc.)
+```
+
+**2. Bootstrap GPU Node**
+```bash
+# On your GPU cluster (Prime Intellect, Lambda, etc.)
+export TAILSCALE_AUTH_KEY="your-key"  # Optional
+export SSH_PUBLIC_KEY="ssh-ed25519 ..."  # Your SSH key
+
+# Run bootstrap
+bash nexa_infra/Boostrap.sh
+```
+
+**3. Deploy Code**
+```bash
+# From local machine
+rsync -avz --exclude='.git' . user@gpu-node:/workspace/nexa_compute/
+scp .env user@gpu-node:/workspace/nexa_compute/.env
+```
+
+**4. Run Complete Pipeline**
+```bash
+# SSH to node
+ssh user@gpu-node
+cd /workspace/nexa_compute
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run training
+python orchestrate.py launch --config nexa_train/configs/baseline.yaml
+```
+
+**See [SETUP.md](SETUP.md) for complete turn-key setup guide.**
+
+### Local Development
 
 ```bash
-./scripts/torchrun_wrapper.sh scripts/test_hf_train.py [args...]
+# Clone repository
+git clone <repository-url>
+cd Nexa_compute
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure API keys
+cp .env.example .env
+# Edit .env with your keys
+```
+
+### Basic Workflow
+
+**1. Prepare Data**
+```bash
+orchestrate.py prepare_data --config nexa_train/configs/baseline.yaml
+```
+
+**2. Run Knowledge Distillation**
+```bash
+# Generate teacher inputs
+jupyter notebook nexa_data/data_analysis/distill_data_overview.ipynb
+
+# Collect teacher completions
+python -m nexa_distill.collect_teacher \
+  --src data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet \
+  --teacher openrouter:gpt-4o
+
+# Filter and package
+python -m nexa_distill.filter_pairs
+python -m nexa_distill.to_sft
+```
+
+**3. Train Model**
+```bash
+orchestrate.py launch --config nexa_train/configs/baseline.yaml
+```
+
+**4. Evaluate**
+```bash
+orchestrate.py evaluate --checkpoint <checkpoint_path>
+```
+
+**5. Visualize Results**
+```bash
+orchestrate.py leaderboard  # Launch Streamlit dashboard
+```
+
+**6. Serve Inference**
+```bash
+orchestrate.py inference <checkpoint_path>  # Start inference server
+```
+
+### Complete Distillation Pipeline
+
+For a complete example, see the [Distillation Guide](docs/Overview_of_Project/DISTILLATION.md).
+
+---
+
+## Core Modules
+
+### `nexa_data/` — Data Pipeline
+Data preparation, analysis, and automated feedback loops.
+
+- **Data Analysis:** Jupyter notebooks and query utilities (`nexa_data/data_analysis/`)
+- **Feedback Loop:** Improve data based on evaluation weaknesses (`nexa_data/feedback/`)
+- **Data Loaders:** PyTorch DataLoader integrations
+- **Dataset Registry:** Versioned dataset management
+
+### `nexa_distill/` — Knowledge Distillation
+Transform raw data into high-quality training datasets.
+
+- Teacher completion collection
+- Quality filtering and inspection
+- SFT dataset packaging
+- Human-in-the-loop review interface
+
+### `nexa_train/` — Model Training
+Training and fine-tuning with distributed support.
+
+- HuggingFace and custom training backends
+- Distributed training (DDP)
+- Automatic checkpointing
+- Hyperparameter sweeps
+- W&B and MLflow integration
+
+### `nexa_eval/` — Evaluation
+Comprehensive evaluation and benchmarking.
+
+- LLM-as-judge evaluation
+- Rubric-based scoring
+- Metric aggregation
+- Leaderboard generation
+
+### `nexa_ui/` — Visualization
+Streamlit dashboards for data and metrics.
+
+- Evaluation leaderboards
+- Distillation data visualization
+- Training statistics
+- Reads from organized `data/processed/` structure
+
+### `nexa_inference/` — Model Serving
+Production-ready inference server for trained models.
+
+- FastAPI-based inference server
+- REST API for model predictions
+- Health checks and model info endpoints
+- Docker-ready deployment
+
+### `nexa_infra/` — Infrastructure
+Cluster provisioning, job management, and orchestration.
+
+- Multi-provider cluster provisioning
+- Automated job launching
+- Cost tracking
+- Code synchronization
+- One-command bootstrap script
+
+---
+
+## Data Organization
+
+All data follows a clean, organized structure:
+
+```
+data/
+├── raw/              # Raw input data (JSON, JSONL, Parquet)
+└── processed/        # Organized outputs by purpose
+    ├── distillation/ # Teacher inputs, outputs, filtered data, SFT datasets
+    ├── training/     # Training splits and pretrain data
+    ├── evaluation/   # Predictions, metrics, reports, feedback
+    └── raw_summary/  # Analysis summaries
+```
+
+**Query Interface:**
+```python
+from nexa_data.data_analysis.query_data import DataQuery
+
+query = DataQuery()
+teacher_df = query.get_teacher_inputs(version="v1")
+pretrain_df = query.get_pretrain_dataset(shard="001")
 ```
 
 ---
 
-## 3. Telemetry & Monitoring
+## Turn-Key Solution
 
-- **GPU Utilisation**: run `./scripts/gpu_monitor.py --interval 5` in another tmux pane.
-- **In-run metrics**: the training script logs smoothed loss, raw loss, GPU memory, and W&B run IDs.
-- **NVML Snapshots**: manifests capture pre/post GPU utilisation.
+NexaCompute is designed as a **complete turn-key solution**:
 
----
+- **Bring Your Own Compute:** Works with any GPU provider (Prime Intellect, Lambda Labs, CoreWeave, AWS, etc.)
+- **One-Command Bootstrap:** `bash nexa_infra/Boostrap.sh` sets up entire environment
+- **API Key Management:** Configure once via `.env`, use everywhere
+- **Reproducible Docker:** Consistent environments across all deployments
+- **Complete Pipeline:** Data → Training → Evaluation → Inference
+- **Production Ready:** Inference server included for model deployment
 
-## 4. Packaging, Deployment, Cleanup
+**See [SETUP.md](SETUP.md) for complete turn-key setup guide.**
 
-- **Package for deployment**:
-  ```bash
-  python3 scripts/package_for_deployment.py <run_id>
-  ```
-- **Promote to deploy mount (e.g. `/mnt/nexa_durable/deploy/current_model`)**:
-  ```bash
-  python3 scripts/deploy.py <run_id>
-  ```
-- **Summarise runs** (average loss/runtime, etc.):
-  ```bash
-  python3 scripts/analyze_runs.py
-  ```
-- **Prune/archive old checkpoints**:
-  ```bash
-  python3 scripts/cleanup.py --days 7 --prune-size +2G
-  ```
+## Documentation
+
+Comprehensive documentation is available in `docs/Overview_of_Project/`:
+
+- **[Setup Guide](SETUP.md)** — Complete turn-key setup instructions
+- **[Quick Start](docs/Overview_of_Project/QUICK_START.md)** — Get started quickly
+- **[Architecture](docs/Overview_of_Project/ARCHITECTURE.md)** — System design and principles
+- **[Runbook](docs/Overview_of_Project/RUNBOOK.md)** — Operations guide
+- **[Policy](docs/Overview_of_Project/POLICY.md)** — Storage, safety, and cost policies
+- **[Distillation Guide](docs/Overview_of_Project/DISTILLATION.md)** — Complete distillation workflow
+- **[Docker Guide](docker/README.md)** — Docker deployment instructions
 
 ---
 
-## 5. Reproducibility Snapshot
+## Requirements
 
-After any meaningful run, capture the system fingerprint:
+- **Python:** 3.11+
+- **PyTorch:** 2.1.0+
+- **GPU:** NVIDIA GPU with CUDA support (recommended)
+- **Dependencies:** See `requirements.txt`
+
+### Optional
+
+- **Jupyter:** For data analysis notebooks (`pip install jupyter`)
+- **AWS CLI:** For S3 storage syncing
+- **Docker:** For containerized deployment
+- **Streamlit:** Already included in requirements for UI dashboards
+- **W&B Account:** For experiment tracking (configure via API key)
+
+---
+
+## Usage Examples
+
+### Complete Distillation Workflow
 
 ```bash
-python3 orchestrate.py summary
-cat runs/manifests/infra_report.json
+# 1. Generate teacher inputs from enhanced prompts
+jupyter notebook nexa_data/data_analysis/distill_data_overview.ipynb
+
+# 2. Collect teacher completions
+python -m nexa_distill.collect_teacher \
+  --src data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet \
+  --teacher openrouter:gpt-4o \
+  --max-samples 6000
+
+# 3. Filter and package
+python -m nexa_distill.filter_pairs
+python -m nexa_distill.to_sft
+
+# 4. Train student model
+python -m nexa_train.distill \
+  --dataset data/processed/distillation/sft_datasets/sft_scientific_v1.jsonl
+
+# 5. Evaluate
+orchestrate.py evaluate --checkpoint <checkpoint_path>
+
+# 6. View results
+orchestrate.py leaderboard
 ```
 
-This records Python/Torch/CUDA versions, NCCL envs, GPU inventory, and existing manifests. Include it with experiment notes.
+### Infrastructure Provisioning
+
+```bash
+# Provision cluster (Prime Intellect, Lambda, etc.)
+orchestrate.py provision --bootstrap
+
+# Sync code to cluster
+orchestrate.py sync user@gpu-node:/workspace/nexa_compute
+
+# Launch training job
+orchestrate.py launch --config nexa_train/configs/baseline.yaml
+
+# Teardown cluster
+orchestrate.py teardown
+```
+
+### Model Inference
+
+```bash
+# Start inference server
+orchestrate.py inference \
+  --checkpoint data/processed/training/checkpoints/latest/final.pt \
+  --port 8000
+
+# Or via Docker
+docker-compose -f docker/docker-compose.yaml --profile inference up
+
+# Test inference
+curl -X POST http://localhost:8000/infer \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Your input here", "max_tokens": 512}'
+```
+
+### Data Analysis
+
+```python
+from nexa_data.data_analysis.query_data import DataQuery
+
+# Query processed datasets
+query = DataQuery()
+
+# Load teacher inputs
+teacher_df = query.get_teacher_inputs(version="v1")
+
+# List available datasets
+datasets = query.list_available_datasets()
+```
 
 ---
 
-## 6. Shutdown Workflow
+## Project Structure
 
-1. Cancel tmux training (`tmux send-keys -t train C-c`).
-2. Run `python3 orchestrate.py summary` and `python3 scripts/cleanup.py` if desired.
-3. Package/deploy any final checkpoints.
-4. `aws s3 ls s3://nexacompute/ML_Checkpoints/` to verify uploads.
-5. Shut down node (provider-specific, or `shutdown -h now`).
-
----
-
-### Directory Overview
-
-| Path | Purpose |
-|------|---------|
-| `nexa_infra/Boostrap.sh` | Node bootstrap script |
-| `scripts/test_hf_train.py` | Main training runner |
-| `scripts/run_training.sh` | Helper wrapper for env + runner |
-| `scripts/gpu_monitor.py` | NVML telemetry |
-| `scripts/package_for_deployment.py` | Bundle checkpoints/manifests |
-| `scripts/deploy.py` | Promote packaged runs |
-| `scripts/analyze_runs.py` | Manifests analytics |
-| `scripts/cleanup.py` | Prune/archive checkpoints |
-| `runs/manifests/` | Per-run manifests + infra summaries |
-| `docs/` | Post-mortems, storage policy, cost model, etc. |
+```
+Nexa_compute/
+├── nexa_data/          # Data pipeline
+├── nexa_distill/       # Knowledge distillation
+├── nexa_train/         # Model training
+├── nexa_eval/          # Evaluation
+├── nexa_ui/            # Visualization
+├── nexa_infra/         # Infrastructure
+├── data/               # Data storage (raw + processed)
+├── docs/               # Documentation
+├── scripts/            # Utility scripts
+├── orchestrate.py      # Unified CLI
+└── pyproject.toml      # Project configuration
+```
 
 ---
 
-Tag this state as `infra-stable-v1` once satisfied. Future work can iterate on functionality (multi-node scheduling, advanced telemetry, cost dashboards) without revisiting scaffolding.
+## Contributing
+
+NexaCompute follows a modular architecture where each module is self-contained. To extend:
+
+1. **Register new datasets:** Add to `nexa_data/manifest/dataset_registry.yaml`
+2. **Register new models:** Use `nexa_train/models/registry.py`
+3. **Add evaluation metrics:** Extend `nexa_eval/judge.py`
+4. **Custom training backends:** Implement in `nexa_train/backends/`
+
+See [Architecture Documentation](docs/Overview_of_Project/ARCHITECTURE.md) for extensibility patterns.
+
+---
+
+## License
+
+[Specify license]
+
+---
+
+## Support
+
+For questions, issues, or contributions:
+- Review [Documentation](docs/Overview_of_Project/README.md)
+- Check [Runbook](docs/Overview_of_Project/RUNBOOK.md) for operational procedures
+- See [Architecture](docs/Overview_of_Project/ARCHITECTURE.md) for design details
+
+---
+
+**NexaCompute** — ML Lab in a Box. Everything you need to run sophisticated ML workflows, from data to deployment.

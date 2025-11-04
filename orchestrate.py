@@ -61,7 +61,7 @@ def teardown(cluster_config: Path = typer.Option(Path("nexa_infra/cluster.yaml")
 
 
 @app.command()
-def cost(report_dir: Path = typer.Option(Path("runs/manifests"), exists=False)) -> None:
+def cost(report_dir: Path = typer.Option(Path("data/processed/evaluation/reports"), exists=False)) -> None:
     """Summarise cost reports captured during runs."""
     from nexa_infra.cost_tracker import summarize_costs
 
@@ -87,21 +87,43 @@ def evaluate(config: Path = typer.Option(Path("nexa_train/configs/baseline.yaml"
 @app.command()
 def feedback(config: Path = typer.Option(Path("nexa_train/configs/baseline.yaml"), exists=True)) -> None:
     """Kick off model feedback loop analysis."""
-    from nexa_feedback.feedback_loop import run_feedback_cycle
+    from nexa_data.feedback.feedback_loop import run_feedback_cycle
 
     run_feedback_cycle(config)
 
 
 @app.command()
-def leaderboard(host: Optional[str] = typer.Option(None, help="Hostname to bind UI"), port: int = typer.Option(8080)) -> None:
-    """Serve the experiment leaderboard UI."""
-    from nexa_ui.leaderboard import serve_leaderboard
+def leaderboard(host: Optional[str] = typer.Option(None, help="Hostname to bind UI"), port: int = typer.Option(8501)) -> None:
+    """Serve the Streamlit experiment leaderboard UI."""
+    import subprocess
+    import sys
+    
+    script_path = Path(__file__).parent / "nexa_ui" / "leaderboard.py"
+    cmd = [
+        sys.executable, "-m", "streamlit", "run",
+        str(script_path),
+        "--server.port", str(port),
+        "--server.address", host or "0.0.0.0"
+    ]
+    subprocess.run(cmd)
 
-    serve_leaderboard(host or "0.0.0.0", port)
+@app.command()
+def inference(
+    checkpoint: Path = typer.Argument(..., exists=True, help="Path to model checkpoint"),
+    config: Optional[Path] = typer.Option(None, help="Path to model config YAML"),
+    host: str = typer.Option("0.0.0.0", help="Host to bind"),
+    port: int = typer.Option(8000, help="Port to bind"),
+) -> None:
+    """Serve model inference via FastAPI."""
+    from nexa_inference.server import serve_model
+    
+    typer.echo(f"Starting inference server on {host}:{port}")
+    typer.echo(f"Checkpoint: {checkpoint}")
+    serve_model(checkpoint, config, host=host, port=port)
 
 
 @app.command()
-def summary(output: Path = typer.Option(Path("runs/manifests/infra_report.json"), help="Where to write infra report")) -> None:
+def summary(output: Path = typer.Option(Path("data/processed/evaluation/reports/infra_report.json"), help="Where to write infra report")) -> None:
     """Capture current infra fingerprint for reproducibility."""
 
     env_keys = [
@@ -137,18 +159,25 @@ def summary(output: Path = typer.Option(Path("runs/manifests/infra_report.json")
         finally:
             pynvml.nvmlShutdown()
 
-    manifests_dir = ROOT / "runs" / "manifests"
-    manifests_dir.mkdir(parents=True, exist_ok=True)
+    # Collect manifests from organized data structure
+    manifests_dirs = [
+        ROOT / "data" / "processed" / "distillation" / "manifests",
+        ROOT / "data" / "processed" / "evaluation" / "reports",
+        ROOT / "data" / "processed" / "training",
+    ]
     wandb_runs = []
-    if manifests_dir.exists():
-        for manifest_path in manifests_dir.glob("*.json"):
-            try:
-                data = json.loads(manifest_path.read_text())
-            except json.JSONDecodeError:  # pragma: no cover
-                continue
-            wandb_id = data.get("wandb_run_id")
-            if wandb_id:
-                wandb_runs.append({"manifest": manifest_path.name, "wandb_run_id": wandb_id})
+    total_manifests = 0
+    for manifests_dir in manifests_dirs:
+        if manifests_dir.exists():
+            for manifest_path in manifests_dir.glob("*.json"):
+                total_manifests += 1
+                try:
+                    data = json.loads(manifest_path.read_text())
+                except json.JSONDecodeError:  # pragma: no cover
+                    continue
+                wandb_id = data.get("wandb_run_id")
+                if wandb_id:
+                    wandb_runs.append({"manifest": manifest_path.name, "wandb_run_id": wandb_id})
 
     report = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -158,7 +187,7 @@ def summary(output: Path = typer.Option(Path("runs/manifests/infra_report.json")
         "cudnn_available": torch.backends.cudnn.is_available(),
         "env": env_snapshot,
         "gpu": gpu_info,
-        "manifests_indexed": len(list(manifests_dir.glob("*.json"))),
+        "manifests_indexed": total_manifests,
         "wandb_runs": wandb_runs,
     }
 
