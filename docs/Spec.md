@@ -159,7 +159,7 @@ Compute is ephemeral; results are durable.
 * SSH via Tailscale and execute training/eval job:
 
   ```bash
-  ssh ubuntu@${TAILSCALE_HOST} "cd /workspace/nexa-compute && ./scripts/run_training.sh"
+  ssh ubuntu@${TAILSCALE_HOST} "cd /workspace/nexa-compute && ./scripts/shell/training/run_training.sh"
   ```
 * Sets environment:
 

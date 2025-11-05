@@ -190,20 +190,38 @@ class OpenAIClient:
         max_output_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
         extra_params: Optional[Dict[str, object]] = None,
+        max_workers: Optional[int] = None,
     ) -> List[PromptResult]:
-        """Generate completions for a batch of prompts sequentially."""
+        """Generate completions for a batch of prompts concurrently using ThreadPoolExecutor."""
 
-        results: List[PromptResult] = []
-        for request in requests:
-            results.append(
-                self.generate(
-                    request,
-                    model=model,
-                    temperature=temperature,
-                    max_output_tokens=max_output_tokens,
-                    top_p=top_p,
-                    extra_params=extra_params,
-                )
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        
+        # Use max_workers if provided, otherwise use default (typically CPU count * 2)
+        if max_workers is None:
+            import os
+            max_workers = min(len(requests), int(os.getenv("OPENAI_MAX_WORKERS", "32")))
+        
+        results: List[PromptResult] = [None] * len(requests)
+        
+        def generate_single(idx: int, request: PromptRequest) -> tuple[int, PromptResult]:
+            return idx, self.generate(
+                request,
+                model=model,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+                top_p=top_p,
+                extra_params=extra_params,
             )
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_idx = {
+                executor.submit(generate_single, idx, req): idx
+                for idx, req in enumerate(requests)
+            }
+            
+            for future in as_completed(future_to_idx):
+                idx, result = future.result()
+                results[idx] = result
+        
         return results
 

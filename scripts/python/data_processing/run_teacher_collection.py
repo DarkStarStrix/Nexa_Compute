@@ -5,11 +5,12 @@ import os
 import sys
 from pathlib import Path
 
-# Load .env file
-env_path = Path(__file__).parent.parent / ".env"
-if env_path.exists():
-    # Manual load (more reliable)
-    for line in env_path.read_text().splitlines():
+from scripts.python import project_root
+
+PROJECT_ROOT = project_root(Path(__file__))
+ENV_PATH = PROJECT_ROOT / ".env"
+if ENV_PATH.exists():
+    for line in ENV_PATH.read_text().splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             key, value = line.split("=", 1)
@@ -18,16 +19,14 @@ if env_path.exists():
             if key and value:
                 os.environ[key] = value
 else:
-    # Try dotenv as fallback
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except ImportError:
         pass
 
-# Add project to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # Now import and run
 from nexa_distill.collect_teacher import run_collection, parse_args
@@ -58,9 +57,9 @@ def main():
     print()
     
     # Build arguments
-    src = project_root / "data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet"
-    dst = project_root / "data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet"
-    system_prompt = project_root / "data/system_prompt_template.txt"
+    src = PROJECT_ROOT / "data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet"
+    dst = PROJECT_ROOT / "data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet"
+    system_prompt = PROJECT_ROOT / "data/system_prompt_template.txt"
     
     # Ensure output directory exists
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -69,7 +68,7 @@ def main():
     args = argparse.Namespace(
         src=src,
         dst=dst,
-        config=project_root / "nexa_distill/configs/distill_config.yaml",
+        config=PROJECT_ROOT / "nexa_distill/configs/distill_config.yaml",
         teacher="gpt-4o-mini",
         system_prompt=system_prompt,
         prompt_column="user_prompt",

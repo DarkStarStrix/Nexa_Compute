@@ -101,7 +101,7 @@ def tune(
 ) -> None:
     """Run random-search hyperparameter tuning using existing config."""
 
-    from .hyperparameter_search import random_search  # type: ignore
+    from scripts.python.training.hyperparameter_search import random_search  # type: ignore
 
     cfg = _load_training_config(config, override)
     results = random_search(cfg, trials=max_trials)

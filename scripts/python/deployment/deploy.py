@@ -6,12 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import sys
 from pathlib import Path
 
-import sys
+from scripts.python import project_root
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
+PROJECT_ROOT = project_root(Path(__file__))
+SRC = PROJECT_ROOT / "src"
 
 
 def setup_paths() -> None:

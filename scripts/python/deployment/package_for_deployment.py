@@ -10,8 +10,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
+from scripts.python import project_root
+
+PROJECT_ROOT = project_root(Path(__file__))
+SRC = PROJECT_ROOT / "src"
 
 
 def setup_paths() -> None:

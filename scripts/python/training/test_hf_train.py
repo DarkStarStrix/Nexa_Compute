@@ -6,15 +6,17 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
+from scripts.python import project_root
+
+PROJECT_ROOT = project_root(Path(__file__))
+SRC = PROJECT_ROOT / "src"
 
 
 def setup_paths() -> None:
     """Ensure the project source directory is importable."""
 
-if SRC.exists() and str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+    if SRC.exists() and str(SRC) not in sys.path:
+        sys.path.insert(0, str(SRC))
 
 
 def main() -> None:

@@ -54,6 +54,7 @@ htmlcov/
 # Local overrides
 .env.local
 .envrc
+.env
 
 # Shell scripts
 *.sh
@@ -70,3 +71,18 @@ htmlcov/
 *.jsonl.zst
 *.jsonl.zstd
 *.jsonl.zstd.zst
+
+# rubrics
+nexa_eval/rubrics/
+
+# utils
+nexa_distill/utils/
+*openai_api.py
+
+# notebooks
+notebooks/
+
+# docs 
+docs/TODAY_EXECUTION_PLAN.md
+docs/TODAY_SUMMARY.md
+PRODUCTION_RUN_SUMMARY.md
