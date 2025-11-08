@@ -64,7 +64,6 @@ htmlcov/
 # Text files
 *.txt
 *.csv
-*.json
 *.yaml
 *.yml
 *.jsonl
@@ -86,3 +85,15 @@ notebooks/
 docs/TODAY_EXECUTION_PLAN.md
 docs/TODAY_SUMMARY.md
 PRODUCTION_RUN_SUMMARY.md
+
+# repo 
+nexa_inference/checkpoints
+
+# scripts 
+scripts/build_sft_dataset.py
+scripts/precompute_tokenized_sft.py
+scripts/train_falcon3_qlora_smoke.py
+scripts/train_falcon3_qlora.py
+
+# doc
+README_hf.md

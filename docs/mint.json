@@ -1,0 +1,137 @@
+{
+  "name": "NexaCompute Docs",
+  "description": "Operational and architectural guides for the NexaCompute platform.",
+  "logo": {
+    "light": "public/logo-light.svg",
+    "dark": "public/logo-dark.svg"
+  },
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        {
+          "name": "Start Here",
+          "path": "/start-here"
+        },
+        {
+          "name": "Quick Start",
+          "path": "/quick-start"
+        },
+        {
+          "name": "Ready to Run",
+          "path": "/ready-to-run"
+        },
+        {
+          "name": "Setup",
+          "path": "/setup"
+        }
+      ]
+    },
+    {
+      "group": "Project Overview",
+      "pages": [
+        {
+          "name": "Architecture",
+          "path": "/overview/architecture"
+        },
+        {
+          "name": "Data Organization",
+          "path": "/overview/data-organization"
+        },
+        {
+          "name": "Distillation",
+          "path": "/overview/distillation"
+        },
+        {
+          "name": "Module Structure",
+          "path": "/overview/module-structure"
+        },
+        {
+          "name": "Runbook",
+          "path": "/overview/runbook"
+        },
+        {
+          "name": "Policies",
+          "path": "/overview/policies"
+        },
+        {
+          "name": "Roadmap",
+          "path": "/overview/roadmap"
+        }
+      ]
+    },
+    {
+      "group": "Pipeline",
+      "pages": [
+        {
+          "name": "Pipeline Guide",
+          "path": "/pipeline/guide"
+        },
+        {
+          "name": "Implementation Summary",
+          "path": "/pipeline/implementation-summary"
+        },
+        {
+          "name": "Execution Summary",
+          "path": "/pipeline/execution-summary"
+        }
+      ]
+    },
+    {
+      "group": "Operations",
+      "pages": [
+        {
+          "name": "Today Summary",
+          "path": "/operations/today-summary"
+        },
+        {
+          "name": "Execution Plan",
+          "path": "/operations/today-execution-plan"
+        },
+        {
+          "name": "Production Run Summary",
+          "path": "/operations/production-run-summary"
+        },
+        {
+          "name": "Postmortem 2025-10-31",
+          "path": "/operations/postmortem-20251031"
+        }
+      ]
+    },
+    {
+      "group": "Cost & ROI",
+      "pages": [
+        {
+          "name": "Distillation Cost Analysis",
+          "path": "/costs/distillation-cost-analysis"
+        },
+        {
+          "name": "Falcon3 Distillation ROI",
+          "path": "/costs/falcon3-roi"
+        }
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        {
+          "name": "Specification",
+          "path": "/reference/spec"
+        },
+        {
+          "name": "Secret Cleanup",
+          "path": "/reference/secret-cleanup"
+        }
+      ]
+    }
+  ],
+  "footer": {
+    "links": [
+      {
+        "name": "GitHub",
+        "url": "https://github.com/allanmurimiwandia/Nexa_compute"
+      }
+    ]
+  }
+}
+

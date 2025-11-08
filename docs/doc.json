@@ -1,0 +1,299 @@
+{
+  "platform": "Mintlify",
+  "purpose": "Render the NexaCompute documentation set stored under docs/ as a Mintlify site.",
+  "docs_directory": "/Users/allanmurimiwandia/Nexa_compute/docs",
+  "structure_summary": [
+    {
+      "group": "Getting Started",
+      "description": "Onboarding flows and day-one execution guides for NexaCompute operators.",
+      "files": [
+        "START_HERE.md",
+        "QUICK_START.md",
+        "READY_TO_RUN.md",
+        "SETUP.md"
+      ]
+    },
+    {
+      "group": "Project Overview",
+      "description": "System-level architecture, policies, and module explanations located in Overview_of_Project/.",
+      "files": [
+        "Overview_of_Project/README.md",
+        "Overview_of_Project/ARCHITECTURE.md",
+        "Overview_of_Project/DATA_ORGANIZATION.md",
+        "Overview_of_Project/DISTILLATION.md",
+        "Overview_of_Project/MODULE_STRUCTURE.md",
+        "Overview_of_Project/Nexa_compute_roadmap.md",
+        "Overview_of_Project/POLICY.md",
+        "Overview_of_Project/QUICK_START.md",
+        "Overview_of_Project/RUNBOOK.md"
+      ]
+    },
+    {
+      "group": "Pipeline",
+      "description": "Execution playbooks for the data, distillation, and training pipeline.",
+      "files": [
+        "Pipeline/PIPELINE_GUIDE.md",
+        "Pipeline/IMPLEMENTATION_SUMMARY.md",
+        "Pipeline/EXECUTION_SUMMARY.md"
+      ]
+    },
+    {
+      "group": "Operations and Reports",
+      "description": "Daily execution plans, production summaries, and postmortems.",
+      "files": [
+        "TODAY_EXECUTION_PLAN.md",
+        "TODAY_SUMMARY.md",
+        "PRODUCTION_RUN_SUMMARY.md",
+        "Run_Postmortems/POSTMORTEM_20251031.md"
+      ]
+    },
+    {
+      "group": "Cost and ROI",
+      "description": "Cost breakdowns and ROI evaluation for Falcon distillation runs.",
+      "files": [
+        "DISTILLATION_COST_ANALYSIS.md",
+        "FALCON3_DISTILLATION_ROI.md"
+      ]
+    },
+    {
+      "group": "Reference",
+      "description": "Persistent policies, cleanup standards, and system specifications.",
+      "files": [
+        "SECRET_CLEANUP_GUIDE.md",
+        "Spec.md"
+      ]
+    }
+  ],
+  "prerequisites": [
+    {
+      "item": "Node.js >= 18.0.0",
+      "verification": "node --version"
+    },
+    {
+      "item": "npm >= 9.0.0",
+      "verification": "npm --version"
+    },
+    {
+      "item": "Mintlify CLI",
+      "installation": "npm install -g mintlify"
+    }
+  ],
+  "setup_steps": [
+    {
+      "step": 1,
+      "title": "Install Mintlify tooling",
+      "commands": [
+        "npm install -g mintlify"
+      ],
+      "notes": "Use a Node version manager such as fnm or nvm if you need to match the Mintlify-supported Node release."
+    },
+    {
+      "step": 2,
+      "title": "Initialize Mintlify project files",
+      "commands": [
+        "cd /Users/allanmurimiwandia/Nexa_compute",
+        "mintlify init --docs-dir docs"
+      ],
+      "notes": "If mintlify init asks to create example content, decline so the existing docs directory remains untouched."
+    },
+    {
+      "step": 3,
+      "title": "Configure navigation in mint.json",
+      "actions": [
+        "Open mint.json at the repository root.",
+        "Replace the navigation section with the mintlify_navigation_template.navigation array shown below.",
+        "Update logo, social, or analytics fields if desired."
+      ]
+    },
+    {
+      "step": 4,
+      "title": "Add frontmatter to Markdown files where needed",
+      "notes": "Mintlify slugs are derived from frontmatter. Add a title and slug to each Markdown file, especially when nesting under subdirectories.",
+      "example_frontmatter": "---\\ntitle: Start Here\\nslug: /start-here\\ndescription: Day-one execution checklist for NexaCompute.\\n---"
+    },
+    {
+      "step": 5,
+      "title": "Verify internal links and assets",
+      "actions": [
+        "Move any images or attachments into docs/assets/ (create the directory if it does not exist).",
+        "Rewrite relative links so they reference the Mintlify slug (for example, /overview/architecture)."
+      ]
+    }
+  ],
+  "mintlify_navigation_template": {
+    "logo": {
+      "light": "public/logo-light.svg",
+      "dark": "public/logo-dark.svg"
+    },
+    "navigation": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          {
+            "name": "Start Here",
+            "path": "/start-here"
+          },
+          {
+            "name": "Quick Start",
+            "path": "/quick-start"
+          },
+          {
+            "name": "Ready to Run",
+            "path": "/ready-to-run"
+          },
+          {
+            "name": "Setup",
+            "path": "/setup"
+          }
+        ]
+      },
+      {
+        "group": "Project Overview",
+        "pages": [
+          {
+            "name": "Architecture",
+            "path": "/overview/architecture"
+          },
+          {
+            "name": "Data Organization",
+            "path": "/overview/data-organization"
+          },
+          {
+            "name": "Distillation",
+            "path": "/overview/distillation"
+          },
+          {
+            "name": "Module Structure",
+            "path": "/overview/module-structure"
+          },
+          {
+            "name": "Runbook",
+            "path": "/overview/runbook"
+          },
+          {
+            "name": "Policies",
+            "path": "/overview/policies"
+          },
+          {
+            "name": "Roadmap",
+            "path": "/overview/roadmap"
+          }
+        ]
+      },
+      {
+        "group": "Pipeline",
+        "pages": [
+          {
+            "name": "Pipeline Guide",
+            "path": "/pipeline/guide"
+          },
+          {
+            "name": "Implementation Summary",
+            "path": "/pipeline/implementation-summary"
+          },
+          {
+            "name": "Execution Summary",
+            "path": "/pipeline/execution-summary"
+          }
+        ]
+      },
+      {
+        "group": "Operations",
+        "pages": [
+          {
+            "name": "Today Summary",
+            "path": "/operations/today-summary"
+          },
+          {
+            "name": "Execution Plan",
+            "path": "/operations/today-execution-plan"
+          },
+          {
+            "name": "Production Run Summary",
+            "path": "/operations/production-run-summary"
+          },
+          {
+            "name": "Postmortem 2025-10-31",
+            "path": "/operations/postmortem-20251031"
+          }
+        ]
+      },
+      {
+        "group": "Cost & ROI",
+        "pages": [
+          {
+            "name": "Distillation Cost Analysis",
+            "path": "/costs/distillation-cost-analysis"
+          },
+          {
+            "name": "Falcon3 Distillation ROI",
+            "path": "/costs/falcon3-roi"
+          }
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          {
+            "name": "Specification",
+            "path": "/reference/spec"
+          },
+          {
+            "name": "Secret Cleanup",
+            "path": "/reference/secret-cleanup"
+          }
+        ]
+      }
+    ]
+  },
+  "preview_and_build": {
+    "local_preview": {
+      "commands": [
+        "mintlify dev --docs-dir docs --port 3000"
+      ],
+      "notes": "Mintlify automatically watches the docs directory and reloads on file changes."
+    },
+    "content_validation": {
+      "commands": [
+        "mintlify lint"
+      ],
+      "notes": "Run inside the repository root to surface broken links, missing frontmatter, or formatting issues."
+    },
+    "static_export": {
+      "commands": [
+        "mintlify build --docs-dir docs --output dist"
+      ],
+      "notes": "Creates a static bundle inside the dist/ directory that can be hosted on any static site provider."
+    }
+  },
+  "deployment_options": [
+    {
+      "target": "Mintlify-hosted",
+      "instructions": "Use mintlify deploy to push the site to Mintlify hosting. Requires linking the repository to a Mintlify project dashboard."
+    },
+    {
+      "target": "Custom hosting",
+      "instructions": "Serve the build output from dist/ via Netlify, Vercel, GitHub Pages, or a static bucket. Configure the target host to rewrite requests to index.html."
+    }
+  ],
+  "content_notes": [
+    "Keep Markdown headings in sentence case so Mintlify automatically generates clean URLs when slugs are omitted.",
+    "Replace inline HTML tables with Markdown tables when possible for consistent styling.",
+    "Highlight code blocks with fenced syntax (```bash) so Mintlify applies syntax highlighting correctly.",
+    "Add tags or metadata to mint.json if you plan to expose search facets."
+  ],
+  "quality_checks": [
+    {
+      "item": "Broken links",
+      "method": "Run mintlify lint and manually click through navigation during mintlify dev."
+    },
+    {
+      "item": "SEO metadata",
+      "method": "Add description and og metadata in mint.json or individual frontmatter entries."
+    },
+    {
+      "item": "Asset load times",
+      "method": "Optimize large diagrams before placing them in docs/assets/."
+    }
+  ]
+}

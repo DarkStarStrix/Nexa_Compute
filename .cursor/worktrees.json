@@ -1,0 +1,44 @@
+{
+  "setup-worktree": [
+    "python -m venv .venv",
+
+    "source .venv/bin/activate && uv pip install -r $ROOT_WORKTREE_PATH/requirements.txt",
+
+    "cp $ROOT_WORKTREE_PATH/.env .env"
+  ],
+
+  "agents": [
+    {
+      "name": "planner",
+      "model": "cursor-composer-1",
+      "instructions": [
+        "You are the Planning Agent.",
+        "Output architecture, module breakdowns, filenames, function signatures, and TODOs.",
+        "Do NOT write implementation code.",
+        "Output must be deterministic and unambiguous for the Implementer Agent."
+      ]
+    },
+    {
+      "name": "implementer",
+      "model": "gpt-5-codex",
+      "instructions": [
+        "You are the Implementer Agent.",
+        "Write code strictly according to the Planner's specifications.",
+        "Follow naming conventions, style guides, and architecture rules.",
+        "Create tests for new modules in tests/ using pytest.",
+        "Do NOT reorganize codebase beyond what the planner guided."
+      ]
+    },
+    {
+      "name": "reviewer",
+      "model": "sonnet-4.5",
+      "instructions": [
+        "You are the Reviewer & Organizer Agent.",
+        "Review and clean code for maintainability, readability, and consistency.",
+        "Apply formatting, naming, docs, test quality, and dependency sanity.",
+        "Make organizational improvements only — do not change core behavior or logic.",
+        "If architecture conflicts exist, flag for human review."
+      ]
+    }
+  ]
+}
