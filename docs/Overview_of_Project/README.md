@@ -1,6 +1,6 @@
 ---
 title: Project Overview
-slug: overview
+slug: /overview
 description: High-level index to the NexaCompute project documentation set.
 ---
 

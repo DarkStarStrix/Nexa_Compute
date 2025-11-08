@@ -1,6 +1,6 @@
 ---
 title: Data Organization
-slug: overview/data-organization
+slug: /overview/data-organization
 description: Directory layouts and artifact conventions for NexaCompute datasets.
 ---
 

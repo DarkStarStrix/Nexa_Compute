@@ -1,6 +1,6 @@
 ---
 title: Secret Cleanup
-slug: reference/secret-cleanup
+slug: /reference/secret-cleanup
 description: Incident response steps for leaked secrets in NexaCompute.
 ---
 

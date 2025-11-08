@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
   "name": "NexaCompute Docs",
   "description": "Operational and architectural guides for the NexaCompute platform.",
-  "theme": "mint",
   "favicon": "public/favicon.svg",
   "logo": {
     "light": "public/logo-light.svg",
@@ -10,6 +10,12 @@
   },
   "colors": {
     "primary": "#2563EB"
+  },
+  "background": {
+    "color": {
+      "light": "#FFFFFF",
+      "dark": "#0F172A"
+    }
   },
   "ignore": [
     ".venv/**",
@@ -23,54 +29,54 @@
       {
         "group": "Getting Started",
         "pages": [
-          "/start-here",
-          "/quick-start",
-          "/ready-to-run",
-          "/setup"
+          "docs/START_HERE.md",
+          "docs/QUICK_START.md",
+          "docs/READY_TO_RUN.md",
+          "docs/SETUP.md"
         ]
       },
       {
         "group": "Project Overview",
         "pages": [
-          "/overview",
-          "/overview/architecture",
-          "/overview/data-organization",
-          "/overview/distillation",
-          "/overview/module-structure",
-          "/overview/runbook",
-          "/overview/policies",
-          "/overview/infrastructure"
+          "docs/Overview_of_Project/README.md",
+          "docs/Overview_of_Project/ARCHITECTURE.md",
+          "docs/Overview_of_Project/DATA_ORGANIZATION.md",
+          "docs/Overview_of_Project/DISTILLATION.md",
+          "docs/Overview_of_Project/MODULE_STRUCTURE.md",
+          "docs/Overview_of_Project/RUNBOOK.md",
+          "docs/Overview_of_Project/POLICY.md",
+          "docs/Overview_of_Project/Nexa_compute_roadmap.md"
         ]
       },
       {
         "group": "Pipeline",
         "pages": [
-          "/pipeline/guide",
-          "/pipeline/implementation-summary",
-          "/pipeline/execution-summary"
+          "docs/Pipeline/PIPELINE_GUIDE.md",
+          "docs/Pipeline/IMPLEMENTATION_SUMMARY.md",
+          "docs/Pipeline/EXECUTION_SUMMARY.md"
         ]
       },
       {
         "group": "Operations",
         "pages": [
-          "/operations/today-summary",
-          "/operations/today-execution-plan",
-          "/operations/production-run-summary",
-          "/operations/postmortem-20251031"
+          "docs/TODAY_SUMMARY.md",
+          "docs/TODAY_EXECUTION_PLAN.md",
+          "docs/PRODUCTION_RUN_SUMMARY.md",
+          "docs/Run_Postmortems/POSTMORTEM_20251031.md"
         ]
       },
       {
         "group": "Cost & ROI",
         "pages": [
-          "/costs/distillation-cost-analysis",
-          "/costs/falcon3-roi"
+          "docs/DISTILLATION_COST_ANALYSIS.md",
+          "docs/FALCON3_DISTILLATION_ROI.md"
         ]
       },
       {
         "group": "Reference",
         "pages": [
-          "/reference/spec",
-          "/reference/secret-cleanup"
+          "docs/Spec.md",
+          "docs/SECRET_CLEANUP_GUIDE.md"
         ]
       }
     ]
@@ -81,7 +87,7 @@
         "items": [
           {
             "label": "GitHub",
-            "href": "https://github.com/DarkStarStrix/Nexa_Compute/tree/main"
+            "href": "https://github.com/allanmurimiwandia/Nexa_compute"
           }
         ]
       }
@@ -215,54 +221,54 @@
         {
           "group": "Getting Started",
           "pages": [
-            "/start-here",
-            "/quick-start",
-            "/ready-to-run",
-            "/setup"
+            "docs/START_HERE.md",
+            "docs/QUICK_START.md",
+            "docs/READY_TO_RUN.md",
+            "docs/SETUP.md"
           ]
         },
         {
           "group": "Project Overview",
           "pages": [
-            "/overview",
-            "/overview/architecture",
-            "/overview/data-organization",
-            "/overview/distillation",
-            "/overview/module-structure",
-            "/overview/runbook",
-            "/overview/policies",
-            "/overview/infrastructure"
+            "docs/Overview_of_Project/README.md",
+            "docs/Overview_of_Project/ARCHITECTURE.md",
+            "docs/Overview_of_Project/DATA_ORGANIZATION.md",
+            "docs/Overview_of_Project/DISTILLATION.md",
+            "docs/Overview_of_Project/MODULE_STRUCTURE.md",
+            "docs/Overview_of_Project/RUNBOOK.md",
+            "docs/Overview_of_Project/POLICY.md",
+            "docs/Overview_of_Project/Nexa_compute_roadmap.md"
           ]
         },
         {
           "group": "Pipeline",
           "pages": [
-            "/pipeline/guide",
-            "/pipeline/implementation-summary",
-            "/pipeline/execution-summary"
+            "docs/Pipeline/PIPELINE_GUIDE.md",
+            "docs/Pipeline/IMPLEMENTATION_SUMMARY.md",
+            "docs/Pipeline/EXECUTION_SUMMARY.md"
           ]
         },
         {
           "group": "Operations",
           "pages": [
-            "/operations/today-summary",
-            "/operations/today-execution-plan",
-            "/operations/production-run-summary",
-            "/operations/postmortem-20251031"
+            "docs/TODAY_SUMMARY.md",
+            "docs/TODAY_EXECUTION_PLAN.md",
+            "docs/PRODUCTION_RUN_SUMMARY.md",
+            "docs/Run_Postmortems/POSTMORTEM_20251031.md"
           ]
         },
         {
           "group": "Cost & ROI",
           "pages": [
-            "/costs/distillation-cost-analysis",
-            "/costs/falcon3-roi"
+            "docs/DISTILLATION_COST_ANALYSIS.md",
+            "docs/FALCON3_DISTILLATION_ROI.md"
           ]
         },
         {
           "group": "Reference",
           "pages": [
-            "/reference/spec",
-            "/reference/secret-cleanup"
+            "docs/Spec.md",
+            "docs/SECRET_CLEANUP_GUIDE.md"
           ]
         }
       ]

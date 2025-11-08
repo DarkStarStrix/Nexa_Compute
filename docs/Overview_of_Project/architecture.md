@@ -1,6 +1,6 @@
 ---
 title: Architecture
-slug: overview/architecture
+slug: /overview/architecture
 description: System design and component relationships within NexaCompute.
 ---
 

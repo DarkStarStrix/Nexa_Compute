@@ -1,6 +1,6 @@
 ---
 title: Pipeline Guide
-slug: pipeline/guide
+slug: /pipeline/guide
 description: Step-by-step instructions for executing the full NexaCompute pipeline.
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Distillation Guide
-slug: overview/distillation
+slug: /overview/distillation
 description: Comprehensive playbook for running the NexaCompute distillation engine.
 ---
 

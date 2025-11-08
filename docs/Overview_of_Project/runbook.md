@@ -1,6 +1,6 @@
 ---
 title: Runbook
-slug: overview/runbook
+slug: /overview/runbook
 description: Step-by-step operational guide for managing NexaCompute environments and runs.
 ---
 

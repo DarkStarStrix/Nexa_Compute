@@ -1,6 +1,6 @@
 ---
 title: Module Structure
-slug: overview/module-structure
+slug: /overview/module-structure
 description: Directory-by-directory look at NexaCompute modules and their outputs.
 ---
 

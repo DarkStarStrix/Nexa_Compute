@@ -1,6 +1,6 @@
 ---
 title: Postmortem 2025-10-31
-slug: operations/postmortem-20251031
+slug: /operations/postmortem-20251031
 description: Incident review from the October 31, 2025 stress test run.
 ---
 

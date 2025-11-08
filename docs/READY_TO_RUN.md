@@ -1,6 +1,6 @@
 ---
 title: Ready to Run
-slug: ready-to-run
+slug: /ready-to-run
 description: Confirmation checklist when the NexaCompute environment is fully prepared.
 ---
 

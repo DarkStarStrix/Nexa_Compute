@@ -1,6 +1,6 @@
 ---
 title: Setup
-slug: setup
+slug: /setup
 description: Step-by-step instructions to bootstrap the NexaCompute environment on your own infrastructure.
 ---
 

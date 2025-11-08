@@ -1,6 +1,6 @@
 ---
 title: System Specification
-slug: reference/spec
+slug: /reference/spec
 description: Authoritative reference for the NexaCompute system design.
 ---
 
