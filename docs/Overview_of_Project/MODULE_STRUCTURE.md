@@ -1,3 +1,9 @@
+---
+title: Module Structure
+slug: overview/module-structure
+description: Directory-by-directory look at NexaCompute modules and their outputs.
+---
+
 # NexaCompute Module Structure
 
 This document describes the streamlined module structure where each directory is a distinct submodule for the ML pipeline with no overlap.

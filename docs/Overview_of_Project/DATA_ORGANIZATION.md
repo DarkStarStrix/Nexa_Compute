@@ -1,3 +1,9 @@
+---
+title: Data Organization
+slug: overview/data-organization
+description: Directory layouts and artifact conventions for NexaCompute datasets.
+---
+
 # Data Organization Guide
 
 This document describes the complete data organization structure for reliable querying and running.

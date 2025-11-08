@@ -1,3 +1,9 @@
+---
+title: Project Overview
+slug: overview
+description: High-level index to the NexaCompute project documentation set.
+---
+
 # NexaCompute Project Documentation
 
 This directory contains comprehensive documentation for the NexaCompute platform.

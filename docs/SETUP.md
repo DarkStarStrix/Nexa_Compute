@@ -1,3 +1,9 @@
+---
+title: Setup
+slug: setup
+description: Step-by-step instructions to bootstrap the NexaCompute environment on your own infrastructure.
+---
+
 # NexaCompute Turn-Key Setup Guide
 
 Complete guide for setting up NexaCompute as a turn-key ML lab solution on your own GPU cluster.

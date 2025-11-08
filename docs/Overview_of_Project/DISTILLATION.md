@@ -1,3 +1,9 @@
+---
+title: Distillation Guide
+slug: overview/distillation
+description: Comprehensive playbook for running the NexaCompute distillation engine.
+---
+
 # NexaCompute Distillation Guide
 
 Complete guide for running knowledge distillation workflows in NexaCompute.

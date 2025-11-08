@@ -1,3 +1,9 @@
+---
+title: Falcon3 Distillation ROI
+slug: costs/falcon3-roi
+description: ROI evaluation and cost modeling for distilling Falcon3-10B-Base.
+---
+
 # Falcon3-10B-Base Distillation: ROI & Cost Analysis
 
 ## Executive Summary

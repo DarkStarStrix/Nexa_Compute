@@ -1,3 +1,9 @@
+---
+title: Distillation Cost Analysis
+slug: costs/distillation-cost-analysis
+description: Cost breakdown for running NexaCompute distillation with GPT-mini.
+---
+
 # Distillation Cost Analysis
 
 ## Overview
@@ -81,8 +87,8 @@ Based on actual data analysis:
 
 ## Cost Breakdown Percentage
 
-- **Input tokens (uncached):** <0.01%
-- **Input tokens (cached):** <0.01%  
+- **Input tokens (uncached):** &lt;0.01%
+- **Input tokens (cached):** &lt;0.01%  
 - **Output tokens:** 99.98%
 
 ## Cost Optimization Strategies

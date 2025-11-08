@@ -1,3 +1,9 @@
+---
+title: Execution Summary
+slug: pipeline/execution-summary
+description: High-level recap of NexaCompute pipeline readiness and deliverables.
+---
+
 # Executive Summary - Implementation Complete ✅
 
 **Date:** 2025-11-04  

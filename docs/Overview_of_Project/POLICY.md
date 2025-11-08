@@ -1,3 +1,9 @@
+---
+title: Policies
+slug: overview/policies
+description: Centralized storage, safety, and cost policies for NexaCompute workflows.
+---
+
 # NexaCompute Policies
 
 This document consolidates safety, storage, and cost policies for the NexaCompute platform.

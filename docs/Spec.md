@@ -1,3 +1,9 @@
+---
+title: System Specification
+slug: reference/spec
+description: Authoritative reference for the NexaCompute system design.
+---
+
 # **NexaCompute v1 — Full System Specification**
 
 **Author:** Allan

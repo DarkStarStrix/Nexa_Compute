@@ -1,3 +1,9 @@
+---
+title: Quick Start
+slug: quick-start
+description: Rapid command reference for launching the NexaCompute pipeline.
+---
+
 # NexaCompute Quick Start Guide
 
 ## Today's Mission (2025-11-04)

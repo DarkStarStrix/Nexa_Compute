@@ -1,3 +1,9 @@
+---
+title: Implementation Summary
+slug: pipeline/implementation-summary
+description: Summary of pipeline components, scripts, and resources powering NexaCompute.
+---
+
 # NexaCompute Pipeline Implementation Summary
 
 ## Overview

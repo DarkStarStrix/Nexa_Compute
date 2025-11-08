@@ -1,3 +1,9 @@
+---
+title: Infrastructure Overview
+slug: overview/infrastructure
+description: Deep dive into NexaCompute infrastructure, operations, and future scaling plans.
+---
+
 # NexaCompute Infrastructure Overview
 
 **Author:** Allan  

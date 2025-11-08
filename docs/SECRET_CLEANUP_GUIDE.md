@@ -1,3 +1,9 @@
+---
+title: Secret Cleanup
+slug: reference/secret-cleanup
+description: Incident response steps for leaked secrets in NexaCompute.
+---
+
 # Secret Cleanup Guide
 
 ## 🚨 Critical: Rotate Keys First!

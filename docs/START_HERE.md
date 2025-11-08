@@ -1,3 +1,9 @@
+---
+title: Start Here
+slug: start-here
+description: Day-one mission checklist for running NexaCompute end to end.
+---
+
 # 🚀 START HERE - Today's Mission
 
 ## Mission: Generate 100k Dataset + Train Model

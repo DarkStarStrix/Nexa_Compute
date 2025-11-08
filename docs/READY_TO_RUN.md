@@ -1,3 +1,9 @@
+---
+title: Ready to Run
+slug: ready-to-run
+description: Confirmation checklist when the NexaCompute environment is fully prepared.
+---
+
 # ✅ READY TO RUN - All Setup Complete
 
 ## Status: 100% Ready for Execution

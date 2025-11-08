@@ -1,3 +1,9 @@
+---
+title: Architecture
+slug: overview/architecture
+description: System design and component relationships within NexaCompute.
+---
+
 # NexaCompute Architecture
 
 Complete system architecture and design principles for the NexaCompute platform.

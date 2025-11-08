@@ -1,3 +1,9 @@
+---
+title: Pipeline Guide
+slug: pipeline/guide
+description: Step-by-step instructions for executing the full NexaCompute pipeline.
+---
+
 # NexaCompute Pipeline Execution Guide
 
 ## Overview

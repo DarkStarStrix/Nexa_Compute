@@ -1,3 +1,9 @@
+---
+title: Runbook
+slug: overview/runbook
+description: Step-by-step operational guide for managing NexaCompute environments and runs.
+---
+
 # Operations Runbook
 
 Complete guide for operating the NexaCompute platform.
