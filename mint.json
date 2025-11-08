@@ -8,12 +8,18 @@
   },
   "colors": {
     "primary": "#2563EB",
-    "secondary": "#0F172A",
-    "accent": "#38BDF8",
-    "background": "#FFFFFF",
-    "headline": "#111827",
-    "text": "#334155",
-    "border": "#E2E8F0"
+    "background": {
+      "light": "#FFFFFF",
+      "dark": "#0F172A"
+    },
+    "surface": {
+      "light": "#F8FAFC",
+      "dark": "#1E293B"
+    },
+    "text": {
+      "light": "#1F2937",
+      "dark": "#E2E8F0"
+    }
   },
   "navigation": [
     {
@@ -76,7 +82,7 @@
         "group": "Community",
         "links": [
           {
-            "name": "GitHub",
+            "label": "GitHub",
             "url": "https://github.com/allanmurimiwandia/Nexa_compute"
           }
         ]
