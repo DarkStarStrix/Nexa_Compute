@@ -6,227 +6,168 @@ description: System design and component relationships within NexaCompute.
 
 # NexaCompute Architecture
 
-Complete system architecture and design principles for the NexaCompute platform.
+NexaCompute v2 centres the platform around an artifact-first runtime hosted in
+`src/nexa_compute/`. The legacy top-level packages continue to provide domain
+logic, but orchestration, caching, and registry operations now run through a
+small, composable core.
 
-## System Overview
-
-NexaCompute is organized into modular layers so each concern can evolve independently. The platform enables rapid fine-tuning and distillation of high-value domain models with rigorous evaluation and automated feedback loops.
-
-## Module Organization
-
-Each module is a distinct submodule for the ML pipeline with clear responsibilities:
+## Runtime Overview
 
 ```
-nexa_compute/
-├── nexa_data/          # Data preparation, analysis, and feedback
-│   ├── data_analysis/   # Jupyter notebooks and query utilities
-│   ├── feedback/        # Feedback loop for data improvement
-│   ├── filters/         # Data filtering
-│   ├── loaders/         # PyTorch data loaders
-│   ├── manifest/        # Dataset registry
-│   └── schemas/         # Data schemas
-│
-├── nexa_distill/        # Knowledge distillation pipeline
-│   ├── collect_teacher.py
-│   ├── filter_pairs.py
-│   ├── to_sft.py
-│   ├── prompts/
-│   └── utils/
-│
-├── nexa_train/          # Training and fine-tuning
-│   ├── backends/        # Training backends (HF, etc.)
-│   ├── configs/          # Training configurations
-│   ├── models/           # Model registry
-│   ├── optim/            # Optimizers and schedulers
-│   └── sweeps/           # Hyperparameter sweeps
-│
-├── nexa_eval/           # Evaluation and benchmarking
-│   ├── generate.py      # Generate predictions
-│   ├── judge.py         # Score predictions
-│   ├── analyze.py       # Aggregate metrics
-│   ├── reports/          # Evaluation reports
-│   ├── rubrics/          # Evaluation rubrics
-│   └── tasks/            # Evaluation tasks
-│
-├── nexa_ui/             # Visualization and dashboards
-│   ├── leaderboard.py   # Streamlit UI for data viewing
-│   ├── dashboards/      # Dashboard components
-│   └── static/          # Static assets
-│
-└── nexa_infra/          # Infrastructure and orchestration
-    ├── provision.py     # Cluster provisioning
-    ├── launch_job.py    # Job launching
-    ├── slurm.py         # Slurm integration
-    └── cost_tracker.py  # Cost tracking
+repo/
+├── src/nexa_compute/
+│   ├── core/         # artifacts, dag, registry, policies
+│   ├── backends/     # train / serve / schedule adapters
+│   ├── runners/      # high-level task controllers (train/eval/serve)
+│   ├── data/         # catalog + staging utilities
+│   ├── cli/          # Typer CLI (`orchestrate`)
+│   └── ...           # config, models, evaluation, training helpers
+├── pipelines/        # Declarative YAML pipelines
+├── env/              # Environment templates (env.example, axolotl_recipe)
+├── nexa_*            # Legacy operational packages (data, train, eval, infra...)
+└── data/processed/   # Durable artifacts
 ```
 
-## Layer Architecture
+The runtime binds together three primary concepts:
 
-### Data Layer (`nexa_data/`)
-- **Purpose:** Dataset registry and pipeline support raw/processed storage, metadata logging, and batched PyTorch loaders.
-- **Features:**
-  - Organized storage hierarchy (`data/raw/`, `data/processed/`)
-  - Query interface for reliable data access
-  - Dataset versioning and manifest tracking
-  - Support for JSONL, Parquet, and compressed formats
-  - Feedback loop for data improvement based on evaluation
+1. **Artifacts** – Atomic directories with `meta.json` and `COMPLETE` markers
+2. **DAG Execution** – Pipelines are parsed into `PipelineStep` objects and executed
+   through the `PipelineExecutor`
+3. **Registry** – A SQLite database tracks models and runs for downstream serving
 
-### Distillation Layer (`nexa_distill/`)
-- **Purpose:** Transform raw scientific text into high-quality training data via teacher-student distillation.
-- **Features:**
-  - Teacher completion collection
-  - Quality filtering and inspection
-  - SFT dataset packaging
+## Core Components
 
-### Training Layer (`nexa_train/`)
-- **Purpose:** Training and distillation workflows with distributed support.
-- **Features:**
-  - `nexa_train.train` wraps core trainer with callbacks, DDP support, and manifest logging
-  - Support for supervised fine-tuning and knowledge distillation
-  - Automatic checkpointing and resume capability
-  - Integration with W&B and MLflow
+### Artifact Protocol (`core/artifacts.py`)
 
-### Evaluation Layer (`nexa_eval/`)
-- **Purpose:** Metric computation, artifact export, plotting, and rubric judging.
-- **Features:**
-  - `nexa_eval` packages metric computation and artifact export
-  - LLM-as-judge evaluation for scientific tasks
-  - Rubric-based scoring
-  - Leaderboard generation
+1. Materialise outputs inside `<artifact>.tmp/`
+2. Write `meta.json` describing `kind`, `uri`, `hash`, `bytes`, `inputs`, and `labels`
+3. `fsync` contents; atomically rename the directory
+4. Create an empty `COMPLETE` marker
+5. Update any pointer files (`latest.txt`, registry entries) only after `COMPLETE`
 
-### UI Layer (`nexa_ui/`)
-- **Purpose:** Visualization and data viewing via Streamlit.
-- **Features:**
-  - Streamlit dashboards for evaluation metrics
-  - Visualization of distillation data
-  - Training data statistics
-  - Reads from organized `data/processed/` structure
+This contract is respected by the runners and staging utilities, enabling cache
+checks and safe resumption after interruptions.
 
-### Infrastructure Layer (`nexa_infra/`)
-- **Purpose:** Infrastructure provisioning, code syncing, and job launching.
-- **Features:**
-  - `orchestrate.py` provides unified CLI
-  - Cluster provisioning and management
-  - Distributed job coordination
-  - Cost tracking
+### DAG Engine (`core/dag.py`)
 
-## Data Flow
+- Parses pipeline steps into a graph with dependency tracking
+- Computes cache keys from (`uses`, `inputs`, `params`, `backend`, `scheduler`)
+- Skips steps if the output artifact is COMPLETE and the cache key matches
+- Persists state to `<STATE_ROOT>/<pipeline>/pipeline_state.json`
 
-### Training Pipeline
-1. Load config and seed environment.
-2. Build dataloaders through `DataPipeline`.
-3. Instantiate model via registry.
-4. Configure callbacks and train, emitting checkpoints/logs.
-5. Evaluate best model to produce metrics and packaged artifacts.
-6. Generate manifest with complete run metadata.
+### Registry (`core/registry.py`)
 
-### Distillation Pipeline
-1. Curate enhanced exemplars from raw data.
-2. Generate teacher inputs with prompt templates.
-3. Collect teacher completions via API.
-4. Filter and score teacher outputs.
-5. Package into SFT-ready dataset.
-6. Train student model on distilled data.
+- SQLite database with `models` and `runs` tables
+- `register(name, uri, meta)` auto-increments semantic versions
+- `resolve("name[:tag]")` returns the artifact URI for a version/tag
+- `promote(name, version, tag)` updates tag pointers after verifying `COMPLETE`
 
-### Evaluation Pipeline
-1. Load model checkpoint.
-2. Generate predictions on evaluation set.
-3. Score with rubric (LLM-as-judge or heuristics).
-4. Aggregate metrics and generate leaderboard.
-5. Store evaluation artifacts in organized structure.
+### Backends & Runners
 
-### Feedback Loop
-1. Analyze evaluation results for weaknesses.
-2. Generate feedback dataset targeting weak areas.
-3. Incorporate feedback into data preparation.
-4. Repeat training cycle with improved data.
+- **Train:** `AxolotlBackend` (YAML composition + subprocess) and `HFBackend`
+  (wraps `nexa_train`) emit checkpoint artifacts.
+- **Serve:** `vllm` backend spawns OpenAI-compatible servers; `hf_runtime` provides a
+  FastAPI fallback via `nexa_inference`.
+- **Schedule:** `local` executes commands in-process; `slurm` delegates to
+  `nexa_infra`; `k8s` acts as a stub for future work.
+- **Runners:** `TrainRunner`, `EvalRunner`, and `ServeRunner` select the
+  appropriate backend and handle artifact bookkeeping.
 
-## Data Organization
+## Pipeline Execution
 
-All data follows organized structure in `data/processed/`:
+1. **Authoring:** Pipelines are YAML files under `pipelines/`. Each step declares
+   an `id`, `uses`, optional `backend`/`scheduler`, `in`, `out`, and `params`.
+
+2. **CLI Invocation:**
+   ```bash
+   python -m nexa_compute.cli.orchestrate pipeline run pipelines/general_e2e.yaml
+   ```
+
+3. **Parsing:** The CLI loads the YAML, renders it into `PipelineStep` objects,
+   and constructs a `PipelineGraph`.
+
+4. **Execution:** The `PipelineExecutor` walks the graph, skipping cached steps
+   when matching artifacts are present. For each uncached step it calls into a
+   handler based on `uses`:
+
+   - `runners.train` → `TrainRunner.run(TrainRunSpec)`
+   - `runners.eval` → `EvalRunner.run(EvalRunSpec)`
+   - `runners.serve` → `ServeRunner.start(ServeRunSpec)`
+   - `core.registry.*` → Registry helpers
+
+5. **State Persistence:** Step status (`PENDING`, `RUNNING`, `COMPLETE`,
+   `FAILED`, `SKIPPED`) and cache keys are written to `pipeline_state.json`.
+   Resuming a pipeline reuses this state.
+
+6. **Serving:** Active serve handles are tracked in-memory for the session; the
+   CLI exposes `serve start/stop/health` commands for direct control.
+
+## Example Flow (General E2E Pipeline)
+
+1. **Train (HF backend)**
+   - `TrainRunner` calls `backends.train.hf.run`
+   - Hugging Face training writes a durable checkpoint
+   - Runner wraps it in an artifact under `artifacts/checkpoints/...`
+
+2. **Evaluate**
+   - `EvalRunner` loads `nexa_train/configs/baseline.yaml`
+   - Runs `nexa_eval.analyze.evaluate_checkpoint`
+   - Produces `eval_report` artifact in `artifacts/eval/...`
+
+3. **Serve (vLLM dry-run)**
+   - `ServeRunner` starts the vLLM backend (optional dry-run) pointing at the
+     checkpoint artifact.
+
+Each step can be resumed independently thanks to the artifact markers and
+step-level cache keys.
+
+## Data & Artifact Layout
 
 ```
-data/processed/
-├── distillation/        # Distillation pipeline outputs
-│   ├── teacher_inputs/
-│   ├── teacher_outputs/
-│   ├── filtered/
-│   ├── sft_datasets/
-│   └── manifests/
-├── training/            # Training pipeline outputs
-│   ├── train/
-│   ├── val/
-│   └── test/
-├── evaluation/          # Evaluation outputs
-│   ├── predictions/
-│   ├── metrics/
-│   ├── reports/
-│   └── feedback/
-└── raw_summary/         # Raw data analysis summaries
+artifacts/
+├── checkpoints/
+│   └── hf_baseline/
+│       ├── meta.json
+│       ├── COMPLETE
+│       └── ...
+└── eval/
+    └── hf_baseline/
+        ├── meta.json
+        ├── COMPLETE
+        └── eval_report.json
 ```
 
-## Extensibility Points
+Durable datasets and evaluation outputs continue to live under `data/processed/`
+following the established hierarchy. Pipelines link to these paths via the
+catalog/staging helpers.
 
-### Registering New Components
+## Extensibility
 
-**Datasets:**
-```python
-from nexa_compute.data import DatasetRegistry
-registry = DatasetRegistry()
-registry.register("my_dataset", my_dataset_builder)
-```
-
-**Models:**
-```python
-from nexa_train.models import DEFAULT_MODEL_REGISTRY
-DEFAULT_MODEL_REGISTRY.register("my_model", my_model_builder)
-```
-
-**Metrics:**
-```python
-from nexa_compute.evaluation.metrics import MetricRegistry
-registry = MetricRegistry()
-registry.register("my_metric", my_metric_fn)
-```
-
-### Custom Callbacks
-
-Define callbacks without modifying core loop:
-- Logging providers (W&B, MLflow, TensorBoard)
-- Custom checkpoint strategies
-- Early stopping logic
-- Metric aggregation
-
-### CLI Extensions
-
-Override CLI commands or scripts with project-specific automation:
-- Custom training workflows
-- Domain-specific evaluation
-- Integration with external systems
-
-## Design Principles
-
-1. **Modularity:** Each layer can evolve independently.
-2. **Registry Pattern:** Extensibility via registration, not inheritance.
-3. **Configuration-Driven:** All behavior controlled via YAML configs.
-4. **Reproducibility:** Complete lineage tracking via manifests.
-5. **Observability:** Built-in logging and metrics aggregation.
-6. **Storage Hierarchy:** Clear separation of ephemeral vs. durable storage.
-7. **No Overlap:** Each directory is a distinct submodule with clear boundaries.
+- **New Backends:** Implement a `run(...) -> ArtifactMeta` function under
+  `backends/<domain>/` and wire it up in the corresponding runner.
+- **Custom Steps:** Add a new `uses` handler in `cli/orchestrate.py` that
+  translates pipeline YAML into your domain logic.
+- **Registry Integrations:** Use `core.registry` to promote artifacts to new
+  tags or maintain additional metadata columns.
 
 ## Integration Points
 
-- **MLflow:** Automatic parameter and metric logging.
-- **W&B:** Optional experiment tracking.
-- **HuggingFace:** Dataset loading and model hub integration.
-- **AWS S3:** Durable storage backend.
-- **Slurm:** Cluster job scheduling.
-- **Docker:** Containerized execution environments.
-- **Streamlit:** UI dashboards for data visualization.
+- **CLI:** `python -m nexa_compute.cli.orchestrate ...`
+- **Registry API:** Import `core.registry` functions from Python code to resolve
+  checkpoints and promotion tags.
+- **Serving:** Launch via CLI or call `ServeRunner` directly from automation.
+- **Legacy Modules:** `nexa_data`, `nexa_train`, `nexa_eval`, and `nexa_infra`
+  remain available for specialized scripts—the new runtime calls into them as
+  needed.
 
-## Performance Considerations
+## Design Principles
 
-- **Data Loading:** Efficient PyTorch DataLoaders with caching.
-- **Distributed Training:** DDP support with automatic worker coordination.
-- **Checkpointing:** Incremental saves to minimize I/O overhead.
-- **Storage:** Use ephemeral storage for fast I/O during training.
+1. **Artifact-first orchestration** – everything that matters is written once,
+   atomically, and can be resumed.
+2. **Minimal DAG engine** – caching and failure handling with a small API surface.
+3. **Composable backends** – backends are thin wrappers around the underlying
+   tool (Axolotl, HF Trainer, vLLM, FastAPI) and can be swapped easily.
+4. **Single source of truth** – the registry and artifact metadata capture all
+   state required for serving or auditing.
+5. **Progressive enhancement** – stubs (`policies`, `k8s`, dedup/drift) mark the
+   next wave of work without blocking the MVP.

@@ -97,3 +97,7 @@ scripts/train_falcon3_qlora.py
 
 # doc
 README_hf.md
+
+# docs
+docs/Spec_V2.md
+docs/inference_post_mortem.md

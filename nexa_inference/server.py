@@ -19,6 +19,9 @@ except ImportError:
     # Fallback for when nexa_train not available
     DEFAULT_MODEL_REGISTRY = None
 
+from nexa_compute.core.artifacts import META_FILENAME  # type: ignore
+from nexa_compute.core.registry import resolve as registry_resolve  # type: ignore
+
 
 class InferenceRequest(BaseModel):
     """Request schema for inference."""
@@ -44,14 +47,15 @@ class InferenceServer:
     
     def __init__(self, checkpoint_path: Path, config_path: Optional[Path] = None):
         """Initialize inference server with a trained model."""
-        self.checkpoint_path = Path(checkpoint_path)
+        resolved_checkpoint = _resolve_artifact_payload(Path(checkpoint_path))
+        self.checkpoint_path = resolved_checkpoint
         if not self.checkpoint_path.exists():
-            raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+            raise FileNotFoundError(f"Checkpoint not found: {resolved_checkpoint}")
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = self._load_model(checkpoint_path, config_path)
+        self.model = self._load_model(resolved_checkpoint, config_path)
         self.model.eval()
-        self.model_id = checkpoint_path.parent.name
+        self.model_id = resolved_checkpoint.parent.name
         
         self.app = FastAPI(title="NexaCompute Inference Server")
         self._setup_routes()
@@ -137,14 +141,47 @@ class InferenceServer:
 
 
 def serve_model(
-    checkpoint_path: Path,
+    checkpoint_path: Optional[Path] = None,
     config_path: Optional[Path] = None,
+    *,
+    reference: Optional[str] = None,
     host: str = "0.0.0.0",
     port: int = 8000,
 ) -> None:
     """Serve a trained model via FastAPI."""
     import uvicorn
-    
-    server = InferenceServer(checkpoint_path, config_path)
+
+    resolved_checkpoint = _resolve_checkpoint_argument(checkpoint_path, reference)
+    server = InferenceServer(resolved_checkpoint, config_path)
     uvicorn.run(server.app, host=host, port=port)
+
+
+def _resolve_checkpoint_argument(checkpoint: Optional[Path], reference: Optional[str]) -> Path:
+    if checkpoint:
+        expanded = checkpoint.expanduser()
+        if expanded.exists():
+            return expanded
+        if (expanded / META_FILENAME).exists():
+            return expanded
+    if reference:
+        uri = registry_resolve(reference)
+        path = Path(uri).expanduser()
+        if path.exists():
+            return path
+        if (path / META_FILENAME).exists():
+            return path
+    raise FileNotFoundError("Checkpoint path not found and registry reference unresolved")
+
+
+def _resolve_artifact_payload(path: Path) -> Path:
+    if (path / META_FILENAME).exists():
+        for candidate in path.iterdir():
+            if candidate.name in {META_FILENAME, "COMPLETE", "manifest.json"}:
+                continue
+            if candidate.is_dir():
+                return candidate
+            if candidate.is_file() and candidate.suffix in {".bin", ".pt", ".pth"}:
+                return candidate
+        return path
+    return path
 

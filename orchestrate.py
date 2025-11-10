@@ -49,7 +49,8 @@ def launch(config: Path = typer.Option(Path("nexa_train/configs/baseline.yaml"),
     """Launch a training job using the training controller."""
     from nexa_infra.launch_job import launch_training_job
 
-    launch_training_job(config, distributed=distributed)
+    artifact = launch_training_job(config, distributed=distributed)
+    typer.echo(f"Training artifact COMPLETE at {artifact.uri}")
 
 
 @app.command()
@@ -73,7 +74,8 @@ def prepare_data(config: Path = typer.Option(Path("nexa_train/configs/baseline.y
     """Prepare datasets according to the config manifest."""
     from nexa_data.prepare import prepare_from_config
 
-    prepare_from_config(config, materialize_only=materialize_only)
+    artifact = prepare_from_config(config, materialize_only=materialize_only)
+    typer.echo(f"Dataset artifact COMPLETE at {artifact.uri}")
 
 
 @app.command()
@@ -81,7 +83,8 @@ def evaluate(config: Path = typer.Option(Path("nexa_train/configs/baseline.yaml"
     """Run evaluation workflow for a trained checkpoint."""
     from nexa_eval.analyze import evaluate_checkpoint
 
-    evaluate_checkpoint(config, checkpoint)
+    artifact = evaluate_checkpoint(config, checkpoint)
+    typer.echo(f"Eval artifact COMPLETE at {artifact.uri}")
 
 
 @app.command()
@@ -109,17 +112,21 @@ def leaderboard(host: Optional[str] = typer.Option(None, help="Hostname to bind 
 
 @app.command()
 def inference(
-    checkpoint: Path = typer.Argument(..., exists=True, help="Path to model checkpoint"),
+    checkpoint: Optional[Path] = typer.Option(None, help="Path to model checkpoint or artifact"),
     config: Optional[Path] = typer.Option(None, help="Path to model config YAML"),
     host: str = typer.Option("0.0.0.0", help="Host to bind"),
     port: int = typer.Option(8000, help="Port to bind"),
+    reference: Optional[str] = typer.Option(None, help="Registry reference to resolve"),
 ) -> None:
     """Serve model inference via FastAPI."""
     from nexa_inference.server import serve_model
     
+    if checkpoint is None and reference is None:
+        raise typer.BadParameter("Provide --checkpoint or --reference")
     typer.echo(f"Starting inference server on {host}:{port}")
-    typer.echo(f"Checkpoint: {checkpoint}")
-    serve_model(checkpoint, config, host=host, port=port)
+    target = reference or str(checkpoint)
+    typer.echo(f"Source: {target}")
+    serve_model(checkpoint, config, reference=reference, host=host, port=port)
 
 
 @app.command()
