@@ -8,7 +8,7 @@ install:
 	${PIP} install -r requirements.txt
 
 lint:
-	${PYTHON} -m ruff src tests
+	${PYTHON} -m ruff check src tests
 	${PYTHON} -m mypy src
 
 test:
