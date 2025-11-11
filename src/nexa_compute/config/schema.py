@@ -7,6 +7,28 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from nexa_compute.core.project_registry import (
+    DEFAULT_PROJECT_REGISTRY,
+    ProjectRegistryError,
+    validate_project_slug,
+)
+
+
+class ProjectConfig(BaseModel):
+    slug: str = "scientific_assistant"
+    name: str = "Scientific Assistant"
+    owner: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _validate_slug(cls, value: "ProjectConfig") -> "ProjectConfig":
+        validate_project_slug(value.slug)
+        try:
+            DEFAULT_PROJECT_REGISTRY.ensure_registered(value.slug)
+        except ProjectRegistryError:
+            # Allow unregistered projects during bootstrap; registry can be refreshed later.
+            pass
+        return value
+
 
 class DataSplitConfig(BaseModel):
     train: float = 0.8
@@ -117,6 +139,7 @@ class TrainingLoopConfig(BaseModel):
 
 
 class TrainingConfig(BaseModel):
+    project: ProjectConfig = Field(default_factory=ProjectConfig)
     experiment: ExperimentConfig = Field(default_factory=ExperimentConfig)
     data: DataConfig = Field(default_factory=DataConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
@@ -130,3 +153,36 @@ class TrainingConfig(BaseModel):
         "extra": "allow",
         "validate_assignment": True,
     }
+
+    @model_validator(mode="after")
+    def _ensure_project_scoping(cls, value: "TrainingConfig") -> "TrainingConfig":
+        slug = value.project.slug
+
+        def _ensure_path(current: str, expected_prefix: str) -> str:
+            if current.startswith(expected_prefix):
+                return current
+            return f"{expected_prefix.rstrip('/')}/{Path(current).name}"
+
+        if value.experiment.output_dir == "artifacts/runs":
+            value.experiment.output_dir = f"artifacts/{slug}/runs"
+        elif not value.experiment.output_dir.startswith(f"artifacts/{slug}"):
+            value.experiment.output_dir = _ensure_path(value.experiment.output_dir, f"artifacts/{slug}")
+
+        if value.evaluation.output_dir == "artifacts/evaluation":
+            value.evaluation.output_dir = f"artifacts/{slug}/eval"
+        elif not value.evaluation.output_dir.startswith(f"artifacts/{slug}"):
+            value.evaluation.output_dir = _ensure_path(value.evaluation.output_dir, f"artifacts/{slug}")
+
+        checkpoint_dir = value.training.checkpoint.dir
+        if checkpoint_dir == "artifacts/checkpoints":
+            value.training.checkpoint.dir = f"artifacts/{slug}/checkpoints"
+        elif not checkpoint_dir.startswith(f"artifacts/{slug}"):
+            value.training.checkpoint.dir = _ensure_path(checkpoint_dir, f"artifacts/{slug}/checkpoints")
+
+        log_dir = value.training.logging.log_dir
+        if log_dir == "logs":
+            value.training.logging.log_dir = f"logs/{slug}"
+        elif not log_dir.startswith(f"logs/{slug}"):
+            value.training.logging.log_dir = _ensure_path(log_dir, f"logs/{slug}")
+
+        return value

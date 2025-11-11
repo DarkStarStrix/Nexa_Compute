@@ -1,3 +1,7 @@
+project:
+  slug: scientific_assistant
+  name: Scientific Assistant
+
 experiment:
   name: distributed_baseline
   output_dir: artifacts/runs

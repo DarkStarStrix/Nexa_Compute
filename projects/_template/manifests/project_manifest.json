@@ -1,0 +1,28 @@
+{
+  "project_slug": "{{project_slug}}",
+  "display_name": "{{project_name}}",
+  "description": "{{project_description}}",
+  "created_at": "{{timestamp}}",
+  "owner": "{{project_owner}}",
+  "status": "draft",
+  "tags": [],
+  "dependencies": {
+    "base_model": "{{base_model}}",
+    "datasets": [],
+    "tools": []
+  },
+  "paths": {
+    "configs": "projects/{{project_slug}}/configs/",
+    "pipelines": "projects/{{project_slug}}/pipelines/",
+    "docs": "projects/{{project_slug}}/docs/",
+    "data_raw": "data/raw/{{project_slug}}/",
+    "data_processed": "data/processed/{{project_slug}}/",
+    "artifacts": "artifacts/{{project_slug}}/"
+  },
+  "conventions": {
+    "run_prefix": "{{run_prefix}}",
+    "checkpoint_naming": "{run_id}_checkpoint_{step}",
+    "eval_naming": "{run_id}_eval_{timestamp}"
+  }
+}
+

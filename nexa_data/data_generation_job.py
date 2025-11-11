@@ -7,6 +7,8 @@ from pathlib import Path
 
 # Load .env file (including OPENAI_API_PROJECT - it's needed for model access)
 project_root = Path(__file__).parent.parent
+PROJECT_SLUG = "scientific_assistant"
+PROJECT_PROCESSED = project_root / "data/processed" / PROJECT_SLUG
 env_path = project_root / ".env"
 if env_path.exists():
     for line in env_path.read_text().splitlines():
@@ -32,10 +34,10 @@ def main():
     """Run data generation job with proper configuration."""
     
     # Load paths from manifest
-    manifest_path = project_root / "data/processed/distillation/manifests/distillation_manifest_v1.json"
-    teacher_inputs_path = project_root / "data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet"
+    manifest_path = PROJECT_PROCESSED / "distillation/manifests/distillation_manifest_v1.json"
+    teacher_inputs_path = PROJECT_PROCESSED / "distillation/teacher_inputs/teacher_inputs_v1.parquet"
     system_prompt_path = project_root / "data/system_prompt_template.txt"
-    output_path = project_root / "data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet"
+    output_path = PROJECT_PROCESSED / "distillation/teacher_outputs/teacher_outputs_v1.parquet"
     
     # Verify files exist
     if not teacher_inputs_path.exists():

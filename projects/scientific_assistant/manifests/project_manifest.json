@@ -1,0 +1,31 @@
+{
+  "project_slug": "scientific_assistant",
+  "display_name": "Scientific Assistant",
+  "description": "Tool-using scientific assistant with literature search, computation, and reporting.",
+  "created_at": "2025-11-11T00:00:00Z",
+  "owner": "allan",
+  "status": "active",
+  "tags": ["llm", "tools", "science"],
+  "dependencies": {
+    "base_model": "Allanatrix/Nexa_Sci_distilled_Falcon-10B",
+    "datasets": [
+      "scientific_assistant/distillation/sft_datasets/sft_scientific_v1",
+      "scientific_assistant/tool_protocol/sft_toolproto_v1"
+    ],
+    "tools": ["python.run", "papers.search", "papers.fetch", "units.convert", "think"]
+  },
+  "paths": {
+    "configs": "projects/scientific_assistant/configs/",
+    "pipelines": "projects/scientific_assistant/pipelines/",
+    "docs": "projects/scientific_assistant/docs/",
+    "data_raw": "data/raw/scientific_assistant/",
+    "data_processed": "data/processed/scientific_assistant/",
+    "artifacts": "artifacts/scientific_assistant/"
+  },
+  "conventions": {
+    "run_prefix": "sci",
+    "checkpoint_naming": "{run_id}_checkpoint_{step}",
+    "eval_naming": "{run_id}_eval_{timestamp}"
+  }
+}
+

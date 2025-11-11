@@ -55,6 +55,14 @@ Transform raw data into high-quality training datasets via teacher-student disti
 - Cost tracking and reporting
 - Multi-provider support (Lambda, CoreWeave, AWS, etc.)
 
+### 🧬 **Lifecycle Coverage**
+- **Pre-training** (roadmap) — large-scale corpus preparation and tokenizer support
+- **Fine-tuning & SFT** — supervised instruction tuning with project-scoped datasets
+- **RL / RLHF** (roadmap) — reward modelling and policy optimisation pipelines
+- **Mid-training Telemetry** — checkpointing, logging, and interactive dashboards
+- **Post-training & Serving** — evaluation, guardrails, and deployment controllers
+- **Data Management** — curated, versioned datasets with manifests and provenance
+
 ---
 
 ## Architecture
@@ -63,6 +71,7 @@ NexaCompute is organized into **six distinct modules**, each serving a specific 
 
 ```
 nexa_compute/
+├── projects/       # Project-scoped assets (configs, docs, manifests, pipelines)
 ├── nexa_data/       # Data preparation, analysis, and feedback
 ├── nexa_distill/    # Knowledge distillation pipeline
 ├── nexa_train/      # Model training and fine-tuning
@@ -74,6 +83,12 @@ nexa_compute/
 Each module is self-contained with clear boundaries, communicating via versioned data artifacts rather than direct imports. This design ensures maintainability, testability, and extensibility.
 
 **See [Architecture Documentation](docs/Overview_of_Project/ARCHITECTURE.md) for complete details.**
+
+### Project Organization
+
+- Project assets live under `projects/{project_slug}/`
+- Guardrails and conventions documented in `docs/conventions/`
+- Active projects catalogued in `docs/projects/README.md`
 
 ---
 
@@ -152,7 +167,7 @@ jupyter notebook nexa_data/data_analysis/distill_data_overview.ipynb
 
 # Collect teacher completions
 python -m nexa_distill.collect_teacher \
-  --src data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet \
+  --src data/processed/scientific_assistant/distillation/teacher_inputs/teacher_inputs_v1.parquet \
   --teacher openrouter:gpt-4o
 
 # Filter and package
@@ -327,7 +342,7 @@ jupyter notebook nexa_data/data_analysis/distill_data_overview.ipynb
 
 # 2. Collect teacher completions
 python -m nexa_distill.collect_teacher \
-  --src data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet \
+  --src data/processed/scientific_assistant/distillation/teacher_inputs/teacher_inputs_v1.parquet \
   --teacher openrouter:gpt-4o \
   --max-samples 6000
 
@@ -337,7 +352,7 @@ python -m nexa_distill.to_sft
 
 # 4. Train student model
 python -m nexa_train.distill \
-  --dataset data/processed/distillation/sft_datasets/sft_scientific_v1.jsonl
+  --dataset data/processed/scientific_assistant/distillation/sft_datasets/sft_scientific_v1.jsonl
 
 # 5. Evaluate
 orchestrate.py evaluate --checkpoint <checkpoint_path>

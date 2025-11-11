@@ -1,3 +1,7 @@
+project:
+  slug: scientific_assistant
+  name: Scientific Assistant
+
 experiment:
   name: stress_5090_single
   output_dir: artifacts/runs
