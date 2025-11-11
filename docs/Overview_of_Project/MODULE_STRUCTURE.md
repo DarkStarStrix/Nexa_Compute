@@ -1,6 +1,6 @@
 ---
 title: Module Structure
-slug: /overview/module-structure
+slug: overview/module-structure
 description: Directory-by-directory look at NexaCompute modules and their outputs.
 ---
 
@@ -72,6 +72,17 @@ source of specialized helpers:
 - `nexa_ui/` – Streamlit dashboards
 - `nexa_infra/` – Provisioning, launch utilities, Slurm helpers
 - `nexa_inference/` – FastAPI inference runtime (-- used by `backends/serve/hf_runtime.py`)
+
+## Projects
+
+Project-specific assets live under `projects/{project_slug}/`:
+
+- `configs/` – Training and evaluation configs scoped to the project
+- `docs/` – Specifications, notes, and post-mortems
+- `manifests/` – Machine-readable project metadata
+- `pipelines/` – Pipeline definitions tailored to the project
+
+See `docs/conventions/PROJECT_STRUCTURE.md` for templated structure and guardrails.
 
 ## Pipelines and Environment Assets
 

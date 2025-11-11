@@ -1,6 +1,6 @@
 ---
 title: Quick Start
-slug: /quick-start
+slug: quick-start
 description: Rapid command reference for launching the NexaCompute pipeline.
 ---
 

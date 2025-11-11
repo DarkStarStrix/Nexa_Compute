@@ -1,6 +1,6 @@
 ---
 title: Data Organization
-slug: /overview/data-organization
+slug: overview/data-organization
 description: Directory layouts and artifact conventions for NexaCompute datasets.
 ---
 
@@ -12,36 +12,19 @@ This document describes the complete data organization structure for reliable qu
 
 ```
 data/
-├── raw/                          # Raw input data (gitignored)
-│   ├── README.md                # Raw data overview
-│   ├── DATA_INDEX.md            # Quick reference index
-│   ├── *.json                   # Enhanced prompts
-│   ├── *.jsonl                  # Training datasets
-│   └── *.parquet                # Combined datasets
+├── raw/
+│   └── {project_slug}/                      # Raw input data (gitignored)
+│       ├── README.md                       # Raw data overview
+│       ├── DATA_INDEX.md                   # Quick reference index
+│       ├── *.json / *.jsonl / *.parquet    # Source corpora
 │
-└── processed/                    # Organized processed outputs
-    ├── README.md                # Processed data overview
-    ├── distillation/            # Distillation pipeline outputs
-    │   ├── teacher_inputs/      # Teacher request data
-    │   │   └── teacher_inputs_v1.parquet
-    │   ├── teacher_outputs/    # Teacher completions
-    │   ├── filtered/            # Filtered teacher data
-    │   ├── sft_datasets/        # Final SFT-ready datasets
-    │   └── manifests/           # Distillation manifests
-    │       └── distillation_manifest_v1.json
-    │
-    ├── training/                 # Training pipeline outputs
-    │   ├── train/               # Training splits
-    │   ├── val/                 # Validation splits
-    │   └── test/                # Test splits
-    │
-    ├── evaluation/              # Evaluation outputs
-    │   ├── predictions/         # Model predictions
-    │   ├── metrics/             # Evaluation metrics
-    │   └── reports/             # Evaluation reports
-    │
-    └── raw_summary/             # Raw data analysis summaries
-        └── statistics/          # Dataset statistics
+└── processed/
+    └── {project_slug}/                     # Organized processed outputs
+        ├── distillation/                   # Teacher, filtered, and SFT datasets
+        ├── tool_protocol/                  # Tool-protocol episodes
+        ├── training/                       # Training-ready splits
+        ├── evaluation/                     # Evaluation predictions/reports
+        └── raw_summary/                    # Dataset statistics
 ```
 
 ## Querying Data
@@ -66,7 +49,7 @@ datasets = query.list_available_datasets()
 from pathlib import Path
 
 root = Path("/Users/allanmurimiwandia/Nexa_compute")
-teacher_path = root / "data" / "processed" / "distillation" / "teacher_inputs" / "teacher_inputs_v1.parquet"
+teacher_path = root / "data" / "processed" / "scientific_assistant" / "distillation" / "teacher_inputs" / "teacher_inputs_v1.parquet"
 df = pd.read_parquet(teacher_path)
 ```
 

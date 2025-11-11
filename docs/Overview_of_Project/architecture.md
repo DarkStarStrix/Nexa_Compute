@@ -1,6 +1,6 @@
 ---
 title: Architecture
-slug: /overview/architecture
+slug: overview/architecture
 description: System design and component relationships within NexaCompute.
 ---
 
@@ -15,6 +15,7 @@ small, composable core.
 
 ```
 repo/
+├── projects/        # Project-scoped configs, docs, manifests, pipelines
 ├── src/nexa_compute/
 │   ├── core/         # artifacts, dag, registry, policies
 │   ├── backends/     # train / serve / schedule adapters

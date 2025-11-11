@@ -14,7 +14,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import yaml
 
-from .cost_tracker import estimate_batch_cost
+from nexa_infra.monitoring import estimate_batch_cost
 
 
 @dataclass
@@ -377,8 +377,11 @@ def _render_slurm_script(*, job: SlurmJob, job_count: int, spec_path: Path) -> s
 
 
 __all__ = [
-    "prepare_slurm_batch",
     "SlurmBatchArtifacts",
+    "SlurmJob",
+    "SlurmLauncher",
+    "SweepDefinition",
+    "prepare_slurm_batch",
 ]
 
 

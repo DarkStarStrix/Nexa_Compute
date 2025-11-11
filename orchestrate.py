@@ -7,7 +7,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import pynvml
 import torch
@@ -31,7 +31,7 @@ app = typer.Typer(help="Nexa Compute control surface")
 @app.command()
 def provision(cluster_config: Path = typer.Option(Path("nexa_infra/cluster.yaml"), exists=True), bootstrap: bool = typer.Option(False)) -> None:
     """Provision infrastructure resources defined in the cluster manifest."""
-    from nexa_infra.provision import provision_cluster
+    from nexa_infra.provisioning import provision_cluster
 
     provision_cluster(cluster_config, bootstrap)
 
@@ -39,7 +39,7 @@ def provision(cluster_config: Path = typer.Option(Path("nexa_infra/cluster.yaml"
 @app.command()
 def sync(destination: str = typer.Argument(..., help="user@host:/path target"), include_runs: bool = typer.Option(False, help="Sync runs directory")) -> None:
     """Sync local project code to a remote host using rsync."""
-    from nexa_infra.sync_code import sync_repository
+    from nexa_infra.operations import sync_repository
 
     sync_repository(destination, include_runs=include_runs)
 
@@ -47,7 +47,7 @@ def sync(destination: str = typer.Argument(..., help="user@host:/path target"), 
 @app.command()
 def launch(config: Path = typer.Option(Path("nexa_train/configs/baseline.yaml"), exists=True), distributed: bool = typer.Option(False, help="Respect distributed settings")) -> None:
     """Launch a training job using the training controller."""
-    from nexa_infra.launch_job import launch_training_job
+    from nexa_infra.operations import launch_training_job
 
     artifact = launch_training_job(config, distributed=distributed)
     typer.echo(f"Training artifact COMPLETE at {artifact.uri}")
@@ -56,7 +56,7 @@ def launch(config: Path = typer.Option(Path("nexa_train/configs/baseline.yaml"),
 @app.command()
 def teardown(cluster_config: Path = typer.Option(Path("nexa_infra/cluster.yaml"), exists=True)) -> None:
     """Tear down provisioned infrastructure."""
-    from nexa_infra.teardown import teardown_cluster
+    from nexa_infra.provisioning.teardown import teardown_cluster
 
     teardown_cluster(cluster_config)
 
@@ -64,7 +64,7 @@ def teardown(cluster_config: Path = typer.Option(Path("nexa_infra/cluster.yaml")
 @app.command()
 def cost(report_dir: Path = typer.Option(Path("data/processed/evaluation/reports"), exists=False)) -> None:
     """Summarise cost reports captured during runs."""
-    from nexa_infra.cost_tracker import summarize_costs
+    from nexa_infra.monitoring import summarize_costs
 
     summarize_costs(report_dir)
 
@@ -127,6 +127,70 @@ def inference(
     target = reference or str(checkpoint)
     typer.echo(f"Source: {target}")
     serve_model(checkpoint, config, reference=reference, host=host, port=port)
+
+
+@app.command("run")
+def run_container(
+    target: str = typer.Argument(..., help="Container key: train-light, train-heavy, or infer"),
+    image: Optional[str] = typer.Option(None, "--image", help="Override container image reference"),
+    env: Optional[List[str]] = typer.Option(None, "--env", help="Additional KEY=VALUE env vars"),
+    arg: Optional[List[str]] = typer.Option(None, "--arg", help="Extra args forwarded to bootstrap"),
+) -> None:
+    """Launch a curated Docker image via the bootstrap utility."""
+    from nexa_infra.containers import available_containers, run_container as run_container_task
+
+    valid = {spec.key for spec in available_containers()}
+    if target not in valid:
+        entries = ", ".join(sorted(valid))
+        raise typer.BadParameter(f"Target must be one of: {entries}")
+
+    extra_env: dict[str, str] = {}
+    for item in env or []:
+        if "=" not in item:
+            raise typer.BadParameter(f"--env expects KEY=VALUE pairs (received '{item}')")
+        key, value = item.split("=", 1)
+        extra_env[key] = value
+
+    typer.echo(f"Launching '{target}' container")
+    run_container_task(target, override_image=image, extra_env=extra_env, bootstrap_args=arg or [])
+
+
+@app.command()
+def build_containers(
+    target: Optional[List[str]] = typer.Option(None, "--target", "-t", help="Container key(s) to build (defaults to all)"),
+    variant: str = typer.Option("cu121-py311-pt22", "--variant", help="Canonical build tag applied before aliases"),
+    push: bool = typer.Option(False, "--push/--no-push", help="Push images to the registry after building"),
+    include_latest: bool = typer.Option(True, "--include-latest/--no-include-latest", help="Tag images with 'latest'"),
+    include_date: bool = typer.Option(True, "--include-date/--no-include-date", help="Tag images with a UTC datestamp"),
+    tag: Optional[List[str]] = typer.Option(None, "--tag", help="Additional tag(s) to apply"),
+    build_arg: Optional[List[str]] = typer.Option(None, "--build-arg", help="Docker build args of the form KEY=VALUE"),
+) -> None:
+    """Build curated Docker images and optionally push them to the registry."""
+    from nexa_infra.docker import build_release
+
+    build_args: Dict[str, str] = {}
+    for item in build_arg or []:
+        if "=" not in item:
+            raise typer.BadParameter(f"--build-arg expects KEY=VALUE pairs (received '{item}')")
+        key, value = item.split("=", 1)
+        build_args[key] = value
+
+    targets = target or None
+    typer.echo(
+        f"Building containers for {targets or 'all targets'} "
+        f"(variant={variant}, push={push}, latest={include_latest}, date={include_date})"
+    )
+
+    build_release(
+        targets=targets,
+        variant_tag=variant,
+        include_latest=include_latest,
+        include_date=include_date,
+        push=push,
+        additional_tags=tag or [],
+        build_args=build_args or None,
+    )
+    typer.echo("Build complete")
 
 
 @app.command()

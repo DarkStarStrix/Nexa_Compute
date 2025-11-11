@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from nexa_infra.slurm import prepare_slurm_batch
+from nexa_infra.scheduling.slurm import prepare_slurm_batch
 
 
 def parse_args() -> argparse.Namespace:

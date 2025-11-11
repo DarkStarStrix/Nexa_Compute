@@ -6,14 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from nexa_infra.slurm import SlurmBatchArtifacts, prepare_slurm_batch
+from nexa_infra.scheduling.slurm import SlurmBatchArtifacts, prepare_slurm_batch
 
 __all__ = ["SlurmScheduler", "SlurmBatchArtifacts"]
 
 
 @dataclass
 class SlurmScheduler:
-    """Minimal wrapper delegating to :mod:`nexa_infra.slurm`."""
+    """Minimal wrapper delegating to :mod:`nexa_infra.scheduling.slurm`."""
 
     config_path: Path
 

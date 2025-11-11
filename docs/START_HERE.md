@@ -1,6 +1,6 @@
 ---
 title: Start Here
-slug: /start-here
+slug: start-here
 description: Day-one mission checklist for running NexaCompute end to end.
 ---
 

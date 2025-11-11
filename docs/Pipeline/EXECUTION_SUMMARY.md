@@ -1,6 +1,6 @@
 ---
 title: Execution Summary
-slug: /pipeline/execution-summary
+slug: pipeline/execution-summary
 description: High-level recap of NexaCompute pipeline readiness and deliverables.
 ---
 

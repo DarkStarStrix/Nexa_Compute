@@ -1,6 +1,6 @@
 ---
 title: Policies
-slug: /overview/policies
+slug: overview/policies
 description: Centralized storage, safety, and cost policies for NexaCompute workflows.
 ---
 

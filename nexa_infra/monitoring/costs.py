@@ -13,6 +13,8 @@ def log_cost(
     output_dir: Path = Path("runs/manifests"),
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Path:
+    """Persist a cost breakdown for a single run."""
+
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / f"cost_{run_id}.json"
     payload = {
@@ -71,6 +73,8 @@ def estimate_batch_cost(
 
 
 def summarize_costs(manifest_dir: Path) -> None:
+    """Aggregate individual cost manifests and print a summary."""
+
     if not manifest_dir.exists():
         print("[nexa-infra] No cost manifests found")
         return
@@ -86,3 +90,13 @@ def summarize_costs(manifest_dir: Path) -> None:
     print(f"[nexa-infra] Aggregated cost across {len(totals)} runs: ${grand_total:.2f}")
     for item in totals:
         print(f"  - {item['run_id']}: ${item['total']:.2f}")
+
+
+__all__ = [
+    "GPU_HOURLY_DEFAULTS",
+    "estimate_batch_cost",
+    "log_cost",
+    "summarize_costs",
+]
+
+

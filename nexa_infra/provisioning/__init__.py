@@ -1,18 +1,18 @@
-"""Provisioning workflow for Nexa Compute clusters."""
+"""Provisioning workflows for Nexa Compute clusters."""
 
 from __future__ import annotations
 
-import subprocess
 from pathlib import Path
 
-from .slurm import prepare_slurm_batch
-from .utils import ClusterConfig, run_command
+from nexa_infra.scheduling.slurm import prepare_slurm_batch
+from nexa_infra.utilities import ClusterConfig, run_command
 
 
 def provision_cluster(manifest: Path, bootstrap_tailscale: bool = False) -> None:
+    """Persist the cluster manifest and optionally bootstrap Tailscale connectivity."""
+
     config = ClusterConfig.from_file(manifest)
     print(f"[nexa-infra] Provisioning cluster '{config.name}' in {config.region} using {config.provider}")
-    # Placeholder for IaaS provisioning (Terraform/Pulumi hooks can go here)
     state_dir = Path("runs/manifests")
     state_dir.mkdir(parents=True, exist_ok=True)
     config.to_json(state_dir / f"cluster_{config.name}.json")
@@ -32,8 +32,13 @@ def create_slurm_sweep(config: Path, submit: bool = False) -> None:
 
 
 def _bootstrap_tailscale() -> None:
-    script = Path(__file__).parent / "tailscale_bootstrap.sh"
+    script = Path(__file__).resolve().parents[1] / "tailscale_bootstrap.sh"
     if not script.exists():
         raise FileNotFoundError("tailscale_bootstrap.sh missing")
     print("[nexa-infra] Bootstrapping Tailscale mesh...")
     run_command(["bash", str(script)])
+
+
+__all__ = ["create_slurm_sweep", "provision_cluster"]
+
+

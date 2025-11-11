@@ -61,6 +61,11 @@ htmlcov/
 *.bash
 *.zsh
 
+# Allow curated shell scripts under version control
+!nexa_infra/*.sh
+!docker/entrypoints/*.sh
+!bin/nexa-bootstrap.sh
+
 # Text files
 *.txt
 *.csv

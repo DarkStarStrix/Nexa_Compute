@@ -1,6 +1,6 @@
 ---
 title: Distillation Cost Analysis
-slug: /costs/distillation-cost-analysis
+slug: costs/distillation-cost-analysis
 description: Cost breakdown for running NexaCompute distillation with GPT-mini.
 ---
 

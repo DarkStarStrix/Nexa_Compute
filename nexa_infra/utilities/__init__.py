@@ -13,6 +13,8 @@ import yaml
 
 @dataclass
 class ClusterConfig:
+    """Structured representation of a cluster provisioning manifest."""
+
     name: str
     provider: str
     region: str
@@ -47,5 +49,11 @@ class ClusterConfig:
 
 
 def run_command(cmd: list[str], *, cwd: Optional[Path] = None, check: bool = True) -> subprocess.CompletedProcess[str]:
-    """Run a shell command with optional cwd."""
+    """Run a shell command with optional working directory."""
+
     return subprocess.run(cmd, cwd=cwd, check=check, text=True, capture_output=False)
+
+
+__all__ = ["ClusterConfig", "run_command"]
+
+

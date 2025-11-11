@@ -25,6 +25,7 @@ dependencies = [
   "rich>=13.6",
   "fastapi>=0.115",
   "uvicorn>=0.30",
+  "pint>=0.24",
 ]
 
 [project.optional-dependencies]

@@ -1,6 +1,6 @@
 ---
 title: Pipeline Spec (v2)
-slug: /overview/pipeline-v2
+slug: overview/pipeline-v2
 description: Declarative pipeline format, execution semantics, and caching rules.
 ---
 

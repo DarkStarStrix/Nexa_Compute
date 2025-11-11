@@ -2,4 +2,3 @@
 node_modules/**/*
 logs/**/*
 nexa_inference/checkpoints/**/*
-

@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Sequence
 
 from nexa_compute.core.artifacts import ArtifactMeta  # type: ignore
 from nexa_compute.training.hf_runner import HFTrainingConfig, cli as hf_cli, run_training
-from nexa_infra.slurm import SlurmBatchArtifacts, prepare_slurm_batch
+from nexa_infra.scheduling.slurm import SlurmBatchArtifacts, prepare_slurm_batch
 from nexa_train.train import run_training_job
-
-from datetime import datetime, timezone
 
 
 def _now_utc() -> str:
@@ -24,6 +23,8 @@ def launch_training_job(
     distributed: bool = False,
     overrides: Optional[list[str]] = None,
 ) -> ArtifactMeta:
+    """Launch a Nexa training job."""
+
     if distributed:
         cmd = [
             "bash",
@@ -69,3 +70,8 @@ def launch_slurm_sweep(config: Path, *, submit: bool = False) -> SlurmBatchArtif
     print(f"[nexa-infra] Slurm spec: {artifacts.spec_path}")
     print(f"[nexa-infra] Array size: {artifacts.job_count}")
     return artifacts
+
+
+__all__ = ["launch_training_job", "launch_hf_job", "launch_slurm_sweep"]
+
+
