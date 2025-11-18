@@ -10,27 +10,19 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-PROMPTS_PATH = Path("data/processed/evaluation/prompts/prompts.parquet")
-OUTPUT_DIR = Path("data/processed/evaluation/outputs")
-JUDGMENT_DIR = Path("data/processed/evaluation/judgments")
-REPORT_DIR = Path("data/processed/evaluation/reports")
+RESULTS_DIR = Path("results/evaluation")
+MERGED_RESULTS_PATH = RESULTS_DIR / "merged_results.parquet"
+SUMMARY_PATH = RESULTS_DIR / "summary.json"
+INSIGHTS_PATH = RESULTS_DIR / "insights.json"
 
 
 @st.cache_data(show_spinner=False)
-def _load_prompts(path: Path) -> pd.DataFrame:
+def _load_merged_results(path: Path) -> pd.DataFrame:
     if not path.exists():
         return pd.DataFrame()
-    return pd.read_parquet(path)
-
-
-@st.cache_data(show_spinner=False)
-def _load_outputs(directory: Path) -> pd.DataFrame:
-    frames = [pd.read_parquet(path) for path in directory.glob("outputs_*.parquet")]
-    if not frames:
-        return pd.DataFrame()
-    df = pd.concat(frames, ignore_index=True)
-    if "raw_response" in df.columns:
-        df["is_truncated"] = df["raw_response"].apply(
+    merged = pd.read_parquet(path)
+    if "is_truncated" not in merged.columns and "raw_response" in merged.columns:
+        merged["is_truncated"] = merged["raw_response"].apply(
             lambda x: (
                 isinstance(x, dict)
                 and x.get("choices", [{}])[0].get("finish_reason") == "length"
@@ -38,59 +30,21 @@ def _load_outputs(directory: Path) -> pd.DataFrame:
             if x is not None
             else False
         )
-    else:
-        df["is_truncated"] = False
-    return df
-
-
-@st.cache_data(show_spinner=False)
-def _load_judgments(directory: Path) -> pd.DataFrame:
-    frames = [pd.read_parquet(path) for path in directory.glob("judgments_*.parquet")]
-    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
-
-
-@st.cache_data(show_spinner=False)
-def _load_summary(report_dir: Path) -> Dict[str, object]:
-    summary_path = report_dir / "summary.json"
-    if summary_path.exists():
-        return json.loads(summary_path.read_text(encoding="utf-8"))
-    return {}
-
-
-@st.cache_data(show_spinner=False)
-def _load_insights(report_dir: Path) -> Dict[str, object]:
-    insights_path = report_dir / "insights.json"
-    if insights_path.exists():
-        return json.loads(insights_path.read_text(encoding="utf-8"))
-    return {}
-
-
-@st.cache_data(show_spinner=False)
-def _load_merged(
-    report_dir: Path,
-    prompts: pd.DataFrame,
-    outputs: pd.DataFrame,
-    judgments: pd.DataFrame,
-) -> pd.DataFrame:
-    merged_path = report_dir / "merged_results.parquet"
-    if merged_path.exists():
-        merged = pd.read_parquet(merged_path)
-        if "is_truncated" not in merged.columns and "raw_response" in merged.columns:
-            merged["is_truncated"] = merged["raw_response"].apply(
-                lambda x: (
-                    isinstance(x, dict)
-                    and x.get("choices", [{}])[0].get("finish_reason") == "length"
-                )
-                if x is not None
-                else False
-            )
-        return merged
-    if outputs.empty or judgments.empty:
-        return pd.DataFrame()
-    merged = outputs.merge(judgments, on=["id", "model_id"], how="inner")
-    if not prompts.empty:
-        merged = merged.merge(prompts, on="id", how="left", suffixes=("", "_prompt"))
     return merged
+
+
+@st.cache_data(show_spinner=False)
+def _load_summary(path: Path) -> Dict[str, object]:
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return {}
+
+
+@st.cache_data(show_spinner=False)
+def _load_insights(path: Path) -> Dict[str, object]:
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return {}
 
 
 def _check_truncation(row: pd.Series) -> bool:
@@ -694,12 +648,9 @@ def main() -> None:
         "and domain-specific analysis."
     )
 
-    prompts = _load_prompts(PROMPTS_PATH)
-    outputs = _load_outputs(OUTPUT_DIR)
-    judgments = _load_judgments(JUDGMENT_DIR)
-    summary = _load_summary(REPORT_DIR)
-    insights = _load_insights(REPORT_DIR)
-    merged = _load_merged(REPORT_DIR, prompts, outputs, judgments)
+    merged = _load_merged_results(MERGED_RESULTS_PATH)
+    summary = _load_summary(SUMMARY_PATH)
+    insights = _load_insights(INSIGHTS_PATH)
 
     truncation_count = merged["is_truncated"].sum() if "is_truncated" in merged.columns else 0
     total_count = len(merged)
