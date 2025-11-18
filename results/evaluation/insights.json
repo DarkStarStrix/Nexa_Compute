@@ -1,0 +1,32 @@
+{
+  "total_prompts": 2160,
+  "total_models": 9,
+  "best_overall_model": "openai/gpt-5-mini",
+  "best_overall_score": 4.956666666666666,
+  "truncation_summary": {
+    "total_truncated": 254,
+    "truncation_rate_pct": 11.75925925925926
+  },
+  "top_models_by_metric": {
+    "correctness": {
+      "model": "openai/gpt-5-mini",
+      "score": 4.975
+    },
+    "methodology": {
+      "model": "openai/gpt-5-mini",
+      "score": 4.983333333333333
+    },
+    "specificity": {
+      "model": "openai/gpt-5-mini",
+      "score": 4.975
+    },
+    "clarity": {
+      "model": "deepseek/deepseek-chat-v3.1",
+      "score": 4.954166666666667
+    },
+    "hallucination_safety": {
+      "model": "openai/gpt-5-mini",
+      "score": 4.991666666666666
+    }
+  }
+}

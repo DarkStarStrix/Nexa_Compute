@@ -1,0 +1,588 @@
+{
+  "per_model": [
+    {
+      "model_id": "NexaSci-Falcon",
+      "correctness": 4.3125,
+      "methodology": 4.695833333333334,
+      "specificity": 4.3125,
+      "clarity": 4.5625,
+      "hallucination_safety": 4.583333333333333,
+      "overall_score": 4.493333333333334
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "correctness": 4.675,
+      "methodology": 4.7625,
+      "specificity": 4.591666666666667,
+      "clarity": 4.820833333333334,
+      "hallucination_safety": 4.933333333333334,
+      "overall_score": 4.756666666666666
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "correctness": 4.666666666666667,
+      "methodology": 4.7875,
+      "specificity": 4.679166666666666,
+      "clarity": 4.395833333333333,
+      "hallucination_safety": 4.7375,
+      "overall_score": 4.653333333333333
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "correctness": 4.883333333333334,
+      "methodology": 4.958333333333333,
+      "specificity": 4.854166666666667,
+      "clarity": 4.954166666666667,
+      "hallucination_safety": 4.908333333333333,
+      "overall_score": 4.911666666666666
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "correctness": 4.545833333333333,
+      "methodology": 4.445833333333334,
+      "specificity": 4.404166666666667,
+      "clarity": 4.729166666666667,
+      "hallucination_safety": 4.970833333333333,
+      "overall_score": 4.619166666666667
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "correctness": 4.75,
+      "methodology": 4.845833333333333,
+      "specificity": 4.683333333333334,
+      "clarity": 4.904166666666667,
+      "hallucination_safety": 4.9125,
+      "overall_score": 4.819166666666666
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "correctness": 4.770833333333333,
+      "methodology": 4.904166666666667,
+      "specificity": 4.754166666666666,
+      "clarity": 4.870833333333334,
+      "hallucination_safety": 4.866666666666666,
+      "overall_score": 4.833333333333333
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "correctness": 4.975,
+      "methodology": 4.983333333333333,
+      "specificity": 4.975,
+      "clarity": 4.858333333333333,
+      "hallucination_safety": 4.991666666666666,
+      "overall_score": 4.956666666666666
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "correctness": 4.1,
+      "methodology": 4.1375,
+      "specificity": 3.9375,
+      "clarity": 4.016666666666667,
+      "hallucination_safety": 4.525,
+      "overall_score": 4.1433333333333335
+    }
+  ],
+  "per_domain": [
+    {
+      "model_id": "NexaSci-Falcon",
+      "domain": "biology",
+      "correctness": 4.2,
+      "methodology": 4.7125,
+      "specificity": 4.15,
+      "clarity": 4.5125,
+      "hallucination_safety": 4.625
+    },
+    {
+      "model_id": "NexaSci-Falcon",
+      "domain": "materials",
+      "correctness": 4.55,
+      "methodology": 4.7875,
+      "specificity": 4.5875,
+      "clarity": 4.7375,
+      "hallucination_safety": 4.7125
+    },
+    {
+      "model_id": "NexaSci-Falcon",
+      "domain": "physics",
+      "correctness": 4.1875,
+      "methodology": 4.5875,
+      "specificity": 4.2,
+      "clarity": 4.4375,
+      "hallucination_safety": 4.4125
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "domain": "biology",
+      "correctness": 4.6125,
+      "methodology": 4.725,
+      "specificity": 4.575,
+      "clarity": 4.8375,
+      "hallucination_safety": 4.9375
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "domain": "materials",
+      "correctness": 4.775,
+      "methodology": 4.8375,
+      "specificity": 4.7375,
+      "clarity": 4.9,
+      "hallucination_safety": 4.925
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "domain": "physics",
+      "correctness": 4.6375,
+      "methodology": 4.725,
+      "specificity": 4.4625,
+      "clarity": 4.725,
+      "hallucination_safety": 4.9375
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "domain": "biology",
+      "correctness": 4.5625,
+      "methodology": 4.75,
+      "specificity": 4.5875,
+      "clarity": 4.35,
+      "hallucination_safety": 4.675
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "domain": "materials",
+      "correctness": 4.6875,
+      "methodology": 4.8125,
+      "specificity": 4.7,
+      "clarity": 4.625,
+      "hallucination_safety": 4.75
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "domain": "physics",
+      "correctness": 4.75,
+      "methodology": 4.8,
+      "specificity": 4.75,
+      "clarity": 4.2125,
+      "hallucination_safety": 4.7875
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "domain": "biology",
+      "correctness": 4.85,
+      "methodology": 4.95,
+      "specificity": 4.8375,
+      "clarity": 4.9625,
+      "hallucination_safety": 4.9125
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "domain": "materials",
+      "correctness": 4.9,
+      "methodology": 5.0,
+      "specificity": 4.8875,
+      "clarity": 4.975,
+      "hallucination_safety": 4.9125
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "domain": "physics",
+      "correctness": 4.9,
+      "methodology": 4.925,
+      "specificity": 4.8375,
+      "clarity": 4.925,
+      "hallucination_safety": 4.9
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "domain": "biology",
+      "correctness": 4.6,
+      "methodology": 4.425,
+      "specificity": 4.45,
+      "clarity": 4.7375,
+      "hallucination_safety": 5.0
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "domain": "materials",
+      "correctness": 4.475,
+      "methodology": 4.425,
+      "specificity": 4.35,
+      "clarity": 4.7,
+      "hallucination_safety": 4.9875
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "domain": "physics",
+      "correctness": 4.5625,
+      "methodology": 4.4875,
+      "specificity": 4.4125,
+      "clarity": 4.75,
+      "hallucination_safety": 4.925
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "domain": "biology",
+      "correctness": 4.7375,
+      "methodology": 4.8625,
+      "specificity": 4.6875,
+      "clarity": 4.9,
+      "hallucination_safety": 4.925
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "domain": "materials",
+      "correctness": 4.8375,
+      "methodology": 4.95,
+      "specificity": 4.7875,
+      "clarity": 4.9375,
+      "hallucination_safety": 4.925
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "domain": "physics",
+      "correctness": 4.675,
+      "methodology": 4.725,
+      "specificity": 4.575,
+      "clarity": 4.875,
+      "hallucination_safety": 4.8875
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "domain": "biology",
+      "correctness": 4.7125,
+      "methodology": 4.875,
+      "specificity": 4.7125,
+      "clarity": 4.8625,
+      "hallucination_safety": 4.825
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "domain": "materials",
+      "correctness": 4.825,
+      "methodology": 4.925,
+      "specificity": 4.825,
+      "clarity": 4.925,
+      "hallucination_safety": 4.9
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "domain": "physics",
+      "correctness": 4.775,
+      "methodology": 4.9125,
+      "specificity": 4.725,
+      "clarity": 4.825,
+      "hallucination_safety": 4.875
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "domain": "biology",
+      "correctness": 4.9875,
+      "methodology": 5.0,
+      "specificity": 4.9875,
+      "clarity": 4.875,
+      "hallucination_safety": 5.0
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "domain": "materials",
+      "correctness": 5.0,
+      "methodology": 5.0,
+      "specificity": 5.0,
+      "clarity": 4.9875,
+      "hallucination_safety": 5.0
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "domain": "physics",
+      "correctness": 4.9375,
+      "methodology": 4.95,
+      "specificity": 4.9375,
+      "clarity": 4.7125,
+      "hallucination_safety": 4.975
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "domain": "biology",
+      "correctness": 4.2375,
+      "methodology": 4.3125,
+      "specificity": 4.075,
+      "clarity": 4.125,
+      "hallucination_safety": 4.5
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "domain": "materials",
+      "correctness": 4.2875,
+      "methodology": 4.35,
+      "specificity": 4.15,
+      "clarity": 4.225,
+      "hallucination_safety": 4.575
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "domain": "physics",
+      "correctness": 3.775,
+      "methodology": 3.75,
+      "specificity": 3.5875,
+      "clarity": 3.7,
+      "hallucination_safety": 4.5
+    }
+  ],
+  "per_task_type": [
+    {
+      "model_id": "NexaSci-Falcon",
+      "task_type": "hypothesis",
+      "correctness": 4.159420289855072,
+      "methodology": 4.6231884057971016,
+      "specificity": 4.159420289855072,
+      "clarity": 4.478260869565218,
+      "hallucination_safety": 4.507246376811594
+    },
+    {
+      "model_id": "NexaSci-Falcon",
+      "task_type": "methodology",
+      "correctness": 4.519607843137255,
+      "methodology": 4.794117647058823,
+      "specificity": 4.519607843137255,
+      "clarity": 4.676470588235294,
+      "hallucination_safety": 4.686274509803922
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "task_type": "hypothesis",
+      "correctness": 4.565217391304348,
+      "methodology": 4.72463768115942,
+      "specificity": 4.5,
+      "clarity": 4.782608695652174,
+      "hallucination_safety": 4.891304347826087
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "task_type": "methodology",
+      "correctness": 4.823529411764706,
+      "methodology": 4.813725490196078,
+      "specificity": 4.715686274509804,
+      "clarity": 4.872549019607843,
+      "hallucination_safety": 4.990196078431373
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "task_type": "hypothesis",
+      "correctness": 4.594202898550725,
+      "methodology": 4.72463768115942,
+      "specificity": 4.608695652173913,
+      "clarity": 4.442028985507246,
+      "hallucination_safety": 4.673913043478261
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "task_type": "methodology",
+      "correctness": 4.764705882352941,
+      "methodology": 4.872549019607843,
+      "specificity": 4.7745098039215685,
+      "clarity": 4.333333333333333,
+      "hallucination_safety": 4.823529411764706
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "task_type": "hypothesis",
+      "correctness": 4.840579710144928,
+      "methodology": 4.963768115942029,
+      "specificity": 4.797101449275362,
+      "clarity": 4.956521739130435,
+      "hallucination_safety": 4.884057971014493
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "task_type": "methodology",
+      "correctness": 4.9411764705882355,
+      "methodology": 4.950980392156863,
+      "specificity": 4.931372549019608,
+      "clarity": 4.950980392156863,
+      "hallucination_safety": 4.9411764705882355
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "task_type": "hypothesis",
+      "correctness": 4.246376811594203,
+      "methodology": 4.159420289855072,
+      "specificity": 4.072463768115942,
+      "clarity": 4.565217391304348,
+      "hallucination_safety": 4.949275362318841
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "task_type": "methodology",
+      "correctness": 4.950980392156863,
+      "methodology": 4.833333333333333,
+      "specificity": 4.852941176470588,
+      "clarity": 4.950980392156863,
+      "hallucination_safety": 5.0
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "task_type": "hypothesis",
+      "correctness": 4.6231884057971016,
+      "methodology": 4.77536231884058,
+      "specificity": 4.550724637681159,
+      "clarity": 4.855072463768116,
+      "hallucination_safety": 4.869565217391305
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "task_type": "methodology",
+      "correctness": 4.921568627450981,
+      "methodology": 4.9411764705882355,
+      "specificity": 4.862745098039215,
+      "clarity": 4.970588235294118,
+      "hallucination_safety": 4.970588235294118
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "task_type": "hypothesis",
+      "correctness": 4.6521739130434785,
+      "methodology": 4.86231884057971,
+      "specificity": 4.659420289855072,
+      "clarity": 4.833333333333333,
+      "hallucination_safety": 4.797101449275362
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "task_type": "methodology",
+      "correctness": 4.931372549019608,
+      "methodology": 4.96078431372549,
+      "specificity": 4.882352941176471,
+      "clarity": 4.921568627450981,
+      "hallucination_safety": 4.96078431372549
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "task_type": "hypothesis",
+      "correctness": 4.963768115942029,
+      "methodology": 4.971014492753623,
+      "specificity": 4.963768115942029,
+      "clarity": 4.855072463768116,
+      "hallucination_safety": 4.9855072463768115
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "task_type": "methodology",
+      "correctness": 4.990196078431373,
+      "methodology": 5.0,
+      "specificity": 4.990196078431373,
+      "clarity": 4.862745098039215,
+      "hallucination_safety": 5.0
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "task_type": "hypothesis",
+      "correctness": 4.007246376811594,
+      "methodology": 4.072463768115942,
+      "specificity": 3.869565217391304,
+      "clarity": 4.007246376811594,
+      "hallucination_safety": 4.4855072463768115
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "task_type": "methodology",
+      "correctness": 4.2254901960784315,
+      "methodology": 4.2254901960784315,
+      "specificity": 4.029411764705882,
+      "clarity": 4.029411764705882,
+      "hallucination_safety": 4.578431372549019
+    }
+  ],
+  "counts": [
+    {
+      "model_id": "NexaSci-Falcon",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "prompt_count": 240
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "prompt_count": 240
+    }
+  ],
+  "truncation_stats": [
+    {
+      "model_id": "NexaSci-Falcon",
+      "truncated_count": 0,
+      "total_count": 240,
+      "truncation_rate": 0.0
+    },
+    {
+      "model_id": "anthropic/claude-3.5-sonnet",
+      "truncated_count": 0,
+      "total_count": 240,
+      "truncation_rate": 0.0
+    },
+    {
+      "model_id": "anthropic/claude-sonnet-4.5",
+      "truncated_count": 0,
+      "total_count": 240,
+      "truncation_rate": 0.0
+    },
+    {
+      "model_id": "deepseek/deepseek-chat-v3.1",
+      "truncated_count": 1,
+      "total_count": 240,
+      "truncation_rate": 0.4
+    },
+    {
+      "model_id": "google/gemini-2.5-flash",
+      "truncated_count": 30,
+      "total_count": 240,
+      "truncation_rate": 12.5
+    },
+    {
+      "model_id": "openai/gpt-4-turbo",
+      "truncated_count": 0,
+      "total_count": 240,
+      "truncation_rate": 0.0
+    },
+    {
+      "model_id": "openai/gpt-4o-mini",
+      "truncated_count": 0,
+      "total_count": 240,
+      "truncation_rate": 0.0
+    },
+    {
+      "model_id": "openai/gpt-5-mini",
+      "truncated_count": 8,
+      "total_count": 240,
+      "truncation_rate": 3.3
+    },
+    {
+      "model_id": "qwen/qwen3-32b",
+      "truncated_count": 215,
+      "total_count": 240,
+      "truncation_rate": 89.6
+    }
+  ]
+}
