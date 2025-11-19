@@ -22,40 +22,40 @@ NexaCompute is a complete machine learning platform that packages everything you
 
 ## Key Features
 
-### 🔬 **Knowledge Distillation Pipeline**
+### **Knowledge Distillation Pipeline**
 Transform raw data into high-quality training datasets via teacher-student distillation:
 - Automated teacher completion collection
 - Quality filtering and human-in-the-loop inspection
 - SFT-ready dataset packaging
 - Complete workflow from prompts to trained models
 
-### 📊 **Data Management**
+### **Data Management**
 - Organized storage hierarchy (`data/raw/` → `data/processed/`)
 - Query interface for reliable data access
 - Dataset versioning and manifest tracking
 - Support for JSONL, Parquet, and compressed formats
 - Automated feedback loops for data improvement
 
-### 🚀 **Training & Evaluation**
+### **Training & Evaluation**
 - Distributed training with DDP support
 - HuggingFace integration
 - Automatic checkpointing and resume
 - Evaluation with LLM-as-judge and rubric-based scoring
 - Real-time monitoring and telemetry
 
-### 📈 **Visualization & Dashboards**
+### **Visualization & Dashboards**
 - Streamlit-based UI for data exploration
 - Evaluation leaderboards
 - Training statistics visualization
 - Distillation data inspection
 
-### 🔧 **Infrastructure Orchestration**
+### **Infrastructure Orchestration**
 - One-command cluster provisioning
 - Automated job launching and management
 - Cost tracking and reporting
 - Multi-provider support (Lambda, CoreWeave, AWS, etc.)
 
-### 🧬 **Lifecycle Coverage**
+### **Lifecycle Coverage**
 - **Pre-training** (roadmap) — large-scale corpus preparation and tokenizer support
 - **Fine-tuning & SFT** — supervised instruction tuning with project-scoped datasets
 - **RL / RLHF** (roadmap) — reward modelling and policy optimisation pipelines
@@ -440,12 +440,6 @@ NexaCompute follows a modular architecture where each module is self-contained. 
 4. **Custom training backends:** Implement in `nexa_train/backends/`
 
 See [Architecture Documentation](docs/Overview_of_Project/ARCHITECTURE.md) for extensibility patterns.
-
----
-
-## License
-
-[Specify license]
 
 ---
 
