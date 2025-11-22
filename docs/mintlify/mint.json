@@ -17,12 +17,12 @@
     "topbarLinks": [
         {
             "name": "Dashboard",
-            "url": "http://localhost:3000/dashboard"
+            "url": "https://nexa-forge.vercel.app/dashboard"
         }
     ],
     "topbarCtaButton": {
         "name": "Try Forge Free",
-        "url": "http://localhost:3000"
+        "url": "https://nexa-forge.vercel.app"
     },
     "tabs": [
         {
