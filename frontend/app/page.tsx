@@ -14,6 +14,9 @@ export default function LandingPage() {
               <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">
                 Nexa Forge
               </h1>
+              <div className="mt-4 inline-flex items-center rounded-full bg-yellow-500/10 px-3 py-1 text-sm font-medium text-yellow-400 ring-1 ring-inset ring-yellow-500/20">
+                🚧 Under Development
+              </div>
               <p className="mt-6 text-lg leading-8 text-slate-300">
                 The AI Foundry. Orchestrate data generation, distillation, training, and evaluation on ephemeral GPU compute.
               </p>
@@ -24,9 +27,14 @@ export default function LandingPage() {
                 >
                   Enter Forge <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
-                <Link href="/docs" className="text-sm font-semibold leading-6 text-white">
+                <a
+                  href="https://nexa-compute.mintlify.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-semibold leading-6 text-white hover:text-cyan-400"
+                >
                   Read Documentation <span aria-hidden="true">→</span>
-                </Link>
+                </a>
               </div>
             </div>
           </div>
