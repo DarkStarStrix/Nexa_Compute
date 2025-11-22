@@ -28,7 +28,7 @@ export default function LandingPage() {
                   Enter Forge <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
                 <a
-                  href="https://nexa-compute.mintlify.app"
+                  href="https://none-d0e0cc1e.mintlify.app"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm font-semibold leading-6 text-white hover:text-cyan-400"
