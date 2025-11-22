@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Cpu, Shield, Zap } from "lucide-react";
 
 export default function LandingPage() {
+  console.log('LandingPage rendered');
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Hero Section */}

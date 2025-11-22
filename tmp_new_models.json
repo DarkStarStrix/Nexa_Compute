@@ -1,0 +1,4 @@
+[
+  {"id": "anthropic/claude-3.5-sonnet", "type": "openrouter", "parameters": {"max_workers": 12}},
+  {"id": "openai/gpt-4-turbo", "type": "openrouter", "parameters": {"max_workers": 8}}
+]

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+pydantic
+pyyaml
+pint
+nvidia-ml-py
+python-dotenv
+boto3
