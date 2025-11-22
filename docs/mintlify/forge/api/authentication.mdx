@@ -1,0 +1,20 @@
+---
+title: 'Authentication'
+description: 'How to authenticate API requests'
+---
+
+# Authentication
+
+All API requests require an API key. Generate a key in the Dashboard → Settings page.
+
+## Using the API Key
+Add the header `X-Nexa-Api-Key: YOUR_KEY` to every request.
+
+```bash
+curl -H "X-Nexa-Api-Key: abcdef123456" https://api.nexa.ai/api/jobs
+```
+
+## Security Recommendations
+- Keep keys secret; never commit them to source control.
+- Rotate keys regularly via the dashboard.
+- Use HTTPS for all requests.

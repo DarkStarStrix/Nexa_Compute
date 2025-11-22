@@ -1,0 +1,86 @@
+{
+    "name": "Nexa Platform",
+    "logo": {
+        "dark": "/logo/dark.svg",
+        "light": "/logo/light.svg"
+    },
+    "favicon": "/favicon.svg",
+    "colors": {
+        "primary": "#06b6d4",
+        "light": "#22d3ee",
+        "dark": "#0e7490",
+        "anchors": {
+            "from": "#06b6d4",
+            "to": "#7c3aed"
+        }
+    },
+    "topbarLinks": [
+        {
+            "name": "Dashboard",
+            "url": "http://localhost:3000/dashboard"
+        }
+    ],
+    "topbarCtaButton": {
+        "name": "Try Forge Free",
+        "url": "http://localhost:3000"
+    },
+    "tabs": [
+        {
+            "name": "Nexa Compute",
+            "url": "compute"
+        },
+        {
+            "name": "Nexa Forge",
+            "url": "forge"
+        }
+    ],
+    "anchors": [
+        {
+            "name": "GitHub",
+            "icon": "github",
+            "url": "https://github.com/nexaai/nexa-compute"
+        }
+    ],
+    "navigation": [
+        {
+            "group": "Getting Started",
+            "pages": [
+                "introduction",
+                "quickstart"
+            ]
+        },
+        {
+            "group": "Nexa Compute",
+            "pages": [
+                "compute/overview",
+                "compute/quickstart",
+                "compute/architecture",
+                "compute/workers",
+                "compute/operations",
+                "compute/setup",
+                "compute/deployment",
+                "compute/policies",
+                "compute/pipelines",
+                "compute/modules/pipelines",
+                "compute/modules/distillation",
+                "compute/modules/evaluation"
+            ]
+        },
+        {
+            "group": "Nexa Forge",
+            "pages": [
+                "forge/overview",
+                "forge/getting-started",
+                "forge/pricing",
+                "forge/dashboard",
+                "forge/api-reference",
+                "forge/sdk",
+                "forge/api/authentication"
+            ]
+        }
+    ],
+    "footerSocials": {
+        "github": "https://github.com/nexaai",
+        "twitter": "https://twitter.com/nexaai"
+    }
+}

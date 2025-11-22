@@ -1,0 +1,2293 @@
+---
+title: "Complete API Reference"
+description: "Full reference for all Nexa Forge API endpoints"
+icon: "code"
+---
+
+# `backend_spec.md`
+
+````markdown
+# Nexa Forge Backend Specification (v1.0)
+
+Backend for Nexa Forge: "a control-plane and orchestration layer on top of NexaCompute and GPU workers."
+
+---
+
+## 0. Goals
+
+- Provide a clean API for: ""
+```text
+  - `/generate` → synthetic data
+  - `/audit` → data quality
+  - `/distill` → SFT-ready data
+  - `/train` → fine-tuning
+  - `/evaluate` → evaluation
+  - `/deploy` → deployment
+```text
+- Orchestrate GPU workers (Prime Intellect, later owned GPUs).
+- Meter and bill usage.
+- Maintain model/data provenance.
+- Stay minimal and composable.
+
+---
+
+## 1. High-Level Architecture
+
+```text
+User Code / SDK
+```text
+        │
+        ▼
+```
+  Nexa Forge API (FastAPI on DO VPS)
+```text
+        │
+        ├── Job Queue (Redis / DB)
+        │
+        ├── Worker Registry + Heartbeats
+        │
+        ├── Billing / Usage
+        │
+        └── Artifact Registry + Provenance
+                │
+                ▼
+```
+          GPU Workers (remote_worker.py)
+```text
+                │
+                ▼
+```
+           NexaCompute Pipelines
+````text
+
+---
+
+## 2. Core Services
+
+* **API Service**
+
+  * FastAPI app, mounted under `/api`.
+  * Endpoints: "`/generate`, `/audit`, `/distill`, `/train`, `/evaluate`, `/deploy`, `/status/{job_id}`, `/worker/heartbeat`, `/worker/next_job`."
+
+* **Job Manager**
+
+  * Creates, updates, and tracks jobs.
+  * Stores state in Postgres or SQLite (v0).
+
+* **Queue**
+
+  * Redis list or DB-backed queue.
+  * Supports job assignment and requeue.
+
+* **Worker Registry**
+
+  * Tracks active workers + capabilities.
+  * Provides selection for scheduling.
+
+* **Artifact Registry**
+
+  * Maps dataset/checkpoint IDs to URIs.
+  * Manages manifests for provenance.
+
+* **Billing**
+
+  * Records per-job usage + cost.
+  * Later integrates with Stripe.
+
+---
+
+## 3. Job Model
+
+### BaseJob
+
+```python
+class BaseJob(BaseModel): 
+    job_id: str
+    job_type: str                   # generate, audit, distill, train, evaluate, deploy
+    user_id: str
+    payload: Dict[str, Any]
+    status: str                     # pending, provisioning_worker, assigned, running, completed, failed
+    attempts: int
+    worker_id: Optional[str]
+    result: Optional[Dict[str, Any]]
+    error: Optional[str]
+    created_at: datetime
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    artifacts_uri: Optional[str]
+    logs_uri: Optional[str]
+```json
+
+### Request Schemas
+
+* `GenerateRequest`
+
+  * `task`, `size`, `teacher`, `domain`, `style`
+* `AuditRequest`
+
+  * `dataset_uri`
+* `DistillRequest`
+
+  * `dataset_id`, `teacher`
+* `TrainRequest`
+
+  * `dataset_id`, `model`, `epochs`
+* `EvaluateRequest`
+
+  * `checkpoint_id`
+* `DeployRequest`
+
+  * `checkpoint_id`
+
+---
+
+## 4. Endpoints
+
+### 4.1 POST `/generate`
+
+* Creates `generate` job.
+* Payload: ""
+
+  ```json
+  {
+    "task": "qa",
+    "size": 5000,
+    "teacher": "nexa-psi-10b",
+    "domain": "molecular_science",
+    "style": instruction
+  }
+  ```
+
+* Response: ""
+
+  ```json
+  { "job_id": "job_generate_123" }
+  ```
+
+### 4.2 POST `/audit`
+
+```json
+{ "dataset_uri": "s3://..." }
+```text
+
+### 4.3 POST `/distill`
+
+```json
+{ "dataset_id": "ds_123", "teacher": "nexa-psi-10b" }
+```text
+
+### 4.4 POST `/train`
+
+```json
+{ "dataset_id": "ds_123d", "model": "Mistral-7B", "epochs": 3 }
+```text
+
+### 4.5 POST `/evaluate`
+
+```json
+{ "checkpoint_id": "ckpt_456" }
+```text
+
+### 4.6 POST `/deploy`
+
+```json
+{ "checkpoint_id": "ckpt_456" }
+```text
+
+### 4.7 GET `/status/{job_id}`
+
+Returns: ""
+
+* job metadata
+* status
+* error
+* artifacts/logs URIs (if available)
+
+---
+
+## 5. Scheduling & Resource Allocation
+
+### Resource Hints on Job
+
+```json
+"resources": {
+  "gpu": 1,
+  "gpu_type": "A100",
+  "memory_gb": 16
+}
+```text
+
+Backend uses static rules: ""
+
+```text
+* `generate` → CPU-only or small GPU.
+* `audit` → CPU or small GPU (LLM-as-a-judge tokens).
+* `distill` → CPU or small GPU.
+* `train` → GPU required (A100 or similar).
+* `evaluate` → CPU or small GPU.
+* `deploy` → small CPU/GPU.
+```text
+
+### Scheduling Steps
+
+```text
+1. Job created → `pending`.
+```text
+2. Scheduler selects worker with: ""
+
+   * matching capabilities
+   * `status == "idle"`
+```text
+3. Assign job → `assigned`.
+```text
+4. Worker picks job via `/worker/next_job`.
+```text
+5. On start, job → `running`.
+6. On completion, job → `completed` or `failed`.
+```text
+
+---
+
+## 6. Heartbeats & Failover
+
+* Workers POST `/worker/heartbeat`.
+* Control plane timestamps.
+* If no heartbeat for N seconds: ""
+
+  * mark worker `dead`.
+```text
+  * any `running` jobs on that worker → `pending` and requeued if attempts < MAX_ATTEMPTS.
+```text
+
+---
+
+## 7. Billing & Provenance Hooks
+
+* At job completion: ""
+
+  * compute usage (GPU hours, tokens, rows).
+  * write billing record.
+  * write manifest.json alongside artifacts.
+
+---
+
+## 8. Directory Structure (Backend)
+
+```text
+src/
+  nexa_forge/
+    server/
+      api.py
+      endpoints/
+        generate.py
+        audit.py
+        distill.py
+        train.py
+        evaluate.py
+        deploy.py
+        workers.py
+      models.py
+      jobs.py
+      queue.py
+      scheduler.py
+      auth.py
+      billing.py
+      provenance.py
+      config.py
+
+    workers/
+      remote_worker.py
+      utils.py
+
+    storage/
+      artifacts.py
+      registry.py
+
+    sdk/
+      __init__.py
+      client.py
+      models.py
+```text
+
+---
+
+## 9. MVP Milestones
+
+1. Implement endpoints.
+2. Implement job queue + DB models.
+3. Implement worker heartbeat + next_job.
+4. Implement remote_worker.py and hook NexaCompute pipelines.
+5. Implement basic billing + provenance.
+6. Test end-to-end with: ""
+
+```text
+   * generate → audit → distill → train → evaluate → deploy.
+```text
+
+---
+
+````text
+
+---
+
+## `frontend_spec.md`
+
+```markdown
+# Nexa Forge Frontend Specification (v1.0)
+
+Minimal, clean dashboard + docs for Nexa Forge.
+
+---
+
+## 0. Goals
+
+- Provide a simple operational dashboard: ""
+  - jobs
+  - workers
+  - artifacts
+  - billing
+- Provide a docs portal: ""
+  - API
+  - SDK
+  - workflows
+  - onboarding
+- Hide backend complexity; present a clear surface.
+- Stay small and maintainable.
+
+---
+
+## 1. Tech Stack
+
+- **Next.js** (React, file-based routing).
+- **TypeScript**.
+- **TailwindCSS** for styling.
+- Fetch backend via HTTPS (DO VPS).
+
+---
+
+## 2. High-Level Layout
+
+### Pages
+
+```text
+/frontend
+  /pages
+    index.tsx                  # Landing
+    /dashboard
+      index.tsx                # Overview
+      jobs.tsx
+      job/[job_id].tsx
+      workers.tsx
+      artifacts.tsx
+      billing.tsx
+    /docs
+      index.tsx
+      api.mdx
+      sdk.mdx
+      workflows.mdx
+      onboarding.mdx
+    /settings
+      api_key.tsx
+````bash
+
+### Components
+
+* `Layout`
+* `Sidebar`
+* `TopNav`
+* `Card`
+* `Table`
+* `StatusBadge`
+* `LogViewer`
+* `CodeBlock`
+* `Tabs`
+
+---
+
+## 3. Dashboard Pages
+
+### 3.1 `/dashboard` (Overview)
+
+Shows: ""
+
+* total jobs run
+* jobs by status summary
+* recent jobs table
+* worker count + status
+* cost summary (month-to-date)
+
+Layout: ""
+
+* hero bar with "Nexa Forge"
+* 3–4 cards with key metrics
+* recent jobs table
+
+---
+
+### 3.2 `/dashboard/jobs`
+
+Table: ""
+
+* job_id
+* type
+* status (with badge)
+* created_at
+* duration
+* cost estimate
+
+Filter by `status` (dropdown).
+
+---
+
+### 3.3 `/dashboard/job/[job_id]`
+
+Sections: ""
+
+* **Job Metadata**
+
+  * job_id
+  * type
+  * status
+  * timestamps
+  * worker_id
+  * attempts
+* **Logs**
+
+  * log viewer (text area or streaming list)
+* **Artifacts**
+
+  * links to dataset, checkpoint, reports
+* **Provenance**
+
+  * rendered manifest.json summary
+* **Cost**
+
+  * GPU hours, tokens, rows, total cost
+
+---
+
+### 3.4 `/dashboard/workers`
+
+Table: ""
+
+* worker_id
+* gpu type
+* util %
+* mem used/total
+* status
+* last heartbeat
+* jobs handled
+
+Optional: "small sparkline for recent utilization."
+
+---
+
+### 3.5 `/dashboard/artifacts`
+
+List of artifacts: ""
+
+* datasets
+* distilled datasets
+* checkpoints
+* eval reports
+
+Columns: ""
+
+* id
+* type
+* created_at
+* source_jobs (count)
+* actions (view manifest, download link)
+
+---
+
+### 3.6 `/dashboard/billing`
+
+Shows: ""
+
+* monthly usage summary
+* per-job costs (table)
+* GPU hours total
+* tokens total
+* estimated invoice
+
+Optional: "line chart for daily cost."
+
+---
+
+## 4. Docs Pages
+
+### 4.1 `/docs` Index
+
+Content: ""
+
+* what Nexa Forge is
+* quickstart (SDK example)
+* links: "API, SDK, workflows, onboarding"
+
+### 4.2 `/docs/api`
+
+Sections for: ""
+
+* `/generate`
+* `/audit`
+* `/distill`
+* `/train`
+* `/evaluate`
+* `/deploy`
+* `/status/{job_id}`
+* `/worker/heartbeat` (for completeness)
+
+Each includes: ""
+
+* description
+* request schema
+* response schema
+* curl example
+
+### 4.3 `/docs/sdk`
+
+* install instructions
+* code examples: ""
+
+  * generate + audit
+  * distill + train
+  * evaluate + deploy
+* error handling patterns
+
+### 4.4 `/docs/workflows`
+
+Describes pipelines: ""
+
+* BYOD: ""
+
+  * upload data
+  * audit
+  * distill
+  * train
+  * evaluate
+  * deploy
+* Synthetic: ""
+
+  * generate
+  * audit
+  * distill
+  * train
+  * evaluate
+  * deploy
+
+### 4.5 `/docs/onboarding`
+
+Steps: ""
+
+* get API key
+* set environment variable
+* run SDK example
+* inspect job in dashboard
+* interpret billing
+
+---
+
+## 5. API Integration (frontend/lib/api.ts)
+
+Provide helper functions: ""
+
+* `getJobs()`
+* `getJob(jobId)`
+* `getWorkers()`
+* `getArtifacts()`
+* `getBillingSummary()`
+
+Each attaches `Authorization: "Bearer <API_KEY>` header."
+
+---
+
+## 6. Styling Guidelines
+
+* Base font: "system or Inter."
+* Colors: ""
+
+  * bg: "`#0c1e3d` / `#1b1f27`"
+  * accent: "`#3ff0ff`"
+  * text: "`#ffffff` for primary, `#9ca3af` for secondary"
+* Use white/gray cards on dark background.
+* Avoid visual noise; favor whitespace and simple cards/tables.
+
+---
+
+## 7. Next.js Folder Skeleton (Minimal)
+
+```text
+frontend/
+  package.json
+  tsconfig.json
+  next.config.mjs
+  postcss.config.cjs
+  tailwind.config.cjs
+  /src
+    /pages
+      index.tsx
+      /dashboard
+        index.tsx
+        jobs.tsx
+        job/[job_id].tsx
+        workers.tsx
+        artifacts.tsx
+        billing.tsx
+      /docs
+        index.tsx
+        api.mdx
+        sdk.mdx
+        workflows.mdx
+        onboarding.mdx
+      /settings
+        api_key.tsx
+    /components
+      Layout.tsx
+      Sidebar.tsx
+      TopNav.tsx
+      Card.tsx
+      Table.tsx
+      StatusBadge.tsx
+      LogViewer.tsx
+      CodeBlock.tsx
+      Tabs.tsx
+    /lib
+      api.ts
+      formatters.ts
+```text
+
+---
+
+## 8. Landing Page (index.tsx) Content Outline
+
+Sections: ""
+
+1. **Hero**
+
+   * Title: "“Nexa Forge”"
+   * Subtitle: "“Generate, train, and deploy custom models with a single API.”"
+   * CTA: "“Get API Key” / “View Docs”"
+
+2. **How It Works**
+
+   * 3 steps: ""
+
+     * Generate / Audit Data
+     * Distill / Train
+     * Evaluate / Deploy
+
+3. **Features**
+
+   * Data generation
+   * Quality audit
+   * Distillation
+   * Training
+   * Evaluation
+   * Deployment
+
+4. **For Who**
+
+   * ML engineers
+   * Research labs
+   * Consulting shops
+
+5. **Docs + Dashboard Links**
+
+---
+
+## 9. CI/CD (Frontend)
+
+* GitHub repo: ""
+
+```text
+  * `main` branch → production build.
+```text
+* Use Vercel or DO App Platform: ""
+
+  * On push to `main`, build and deploy: ""
+
+    * `npm install`
+    * `npm run build`
+    * `npm run start` (or static export).
+* Store API URL and branding options as env vars.
+
+---
+
+## 10. MVP Checklist
+
+* [ ] Landing page
+* [ ] Dashboard home
+* [ ] Jobs table + details
+* [ ] Workers page
+* [ ] Billing page
+* [ ] Docs index + API + SDK + workflows + onboarding
+* [ ] API integration with control plane
+
+---
+
+````text
+
+---
+
+## `remote_worker.md`
+
+```markdown
+# remote_worker.py Specification (v1.0)
+
+Defines the behavior of the Nexa Forge remote GPU worker agent.
+
+---
+
+## 0. Purpose
+
+- Poll Nexa Forge control plane for jobs.
+- Execute NexaCompute pipelines on GPU.
+- Stream logs and upload artifacts.
+- Report heartbeats for liveness.
+- Be stateless and easy to provision (via SSH + bootstrap script).
+
+---
+
+## 1. Responsibilities
+
+- Register itself with the control plane.
+- Send periodic heartbeats (`/worker/heartbeat`).
+- Poll for jobs (`/worker/next_job`).
+- Execute jobs: ""
+  - generate
+  - audit
+  - distill
+  - train
+  - evaluate
+  - deploy
+- Handle retries for transient errors.
+- Exit cleanly or remain idle as configured.
+
+---
+
+## 2. Lifecycle
+
+```text
+startup → register → loop: 
+```text
+    heartbeat
+    poll for job
+      if job: ""
+        run job
+        send result
+      else: ""
+        sleep
+````text
+
+---
+
+## 3. Registering Worker
+
+### Endpoint
+
+`POST /worker/register`
+
+### Payload
+
+```json
+{
+  "worker_id": "worker_pi_001","
+  "gpu": "{ "
+    "name": "NVIDIA A100","
+    "memory_gb": "40"
+  },
+  "tags": "["gpu", "a100"],"
+  "version": "v1.0.0"
+}
+```text
+
+Response: 
+
+```json
+{ "worker_id": "worker_pi_001" }"
+```text
+
+---
+
+## 4. Heartbeat
+
+`POST /worker/heartbeat`
+
+Payload: 
+
+```json
+{
+  "worker_id": "worker_pi_001","
+  "gpu": "{ "
+    "util": "12,"
+    "mem_used": "6200,"
+    "mem_total": "40500"
+  },
+  "status": "idle","
+  "timestamp": "2025-11-21T19:52:14Z"
+}
+```text
+
+Frequency: every 5–10 seconds.
+
+---
+
+## 5. Polling for Jobs
+
+`POST /worker/next_job`
+
+Request: 
+
+```json
+{ "worker_id": "worker_pi_001" }"
+```text
+
+Response (if job available): 
+
+```json
+{
+  "job_id": "job_train_91ba0b50","
+  "job_type": "train","
+  "payload": "{ "
+    "dataset_id": "ds_123d","
+    "model": "Mistral-7B","
+    "epochs": "3"
+  }
+}
+```text
+
+If no job, return: 
+
+```json
+{ "job_id": "null }"
+```text
+
+---
+
+## 6. Running Jobs
+
+### Pseudocode
+
+```python
+def process_job(job): ""
+    if job.type == "generate": ""
+        result = run_generate(job.payload)
+    elif job.type == "audit": ""
+        result = run_audit(job.payload)
+    elif job.type == "distill": ""
+        result = run_distill(job.payload)
+    elif job.type == "train": ""
+        result = run_train(job.payload)
+    elif job.type == "evaluate": ""
+        result = run_evaluate(job.payload)
+    elif job.type == "deploy": ""
+        result = run_deploy(job.payload)
+
+    return result
+```text
+
+Each `run_*` uses NexaCompute core modules.
+
+---
+
+## 7. Reporting Results
+
+`POST /worker/job_result`
+
+Payload: 
+
+```json
+{
+  "worker_id": "worker_pi_001","
+  "job_id": "job_train_91ba0b50","
+  "status": "completed","
+  "result": "{ "
+    "checkpoint_id": "ckpt_456","
+    "checkpoint_uri": "s3://...","
+    "train_metrics_uri": "s3://.../metrics.json","
+    "gpu_hours": "3.2"
+  },
+  "artifacts_uri": "s3://nexa-forge/jobs/job_train_91ba0b50/","
+  "logs_uri": "s3://nexa-forge/logs/job_train_91ba0b50.log"
+}
+```text
+
+On failure: 
+
+```json
+{
+  "worker_id": "worker_pi_001","
+  "job_id": "job_train_91ba0b50","
+  "status": "failed","
+  "error": "OOM on GPU","
+  "logs_uri": "s3://nexa-forge/logs/job_train_91ba0b50.log"
+}
+```text
+
+---
+
+## 8. Error Handling and Retries
+
+* Local worker retries transient errors up to `LOCAL_MAX_RETRIES`.
+* Control plane handles global `job.attempts` and requeueing.
+* Worker should: 
+
+  * differentiate between fatal (config, missing files) and transient (network, CUDA OOM).
+  * log all failures with context.
+
+---
+
+## 9. Configuration
+
+### Environment variables
+
+* `NEXA_FORGE_API_URL`
+* `NEXA_FORGE_API_KEY`
+* `WORKER_ID` (optional; can be generated)
+* `WORKER_TAGS`
+* `HEARTBEAT_INTERVAL`
+* `POLL_INTERVAL`
+
+---
+
+## 10. Bootstrap
+
+`bootstrap.sh` example responsibilities: 
+
+* Install system deps (Python, CUDA, libs).
+* Clone NexaCompute repo.
+* Install Python deps (poetry/pip).
+* Run `python -m nexa_forge.workers.remote_worker`.
+
+---
+
+````text
+
+---
+
+## `billing_spec.md`
+
+```markdown
+# Nexa Forge Billing Specification (v1.0)
+
+Defines how Nexa Forge meters and computes costs for jobs.
+
+---
+
+## 0. Goals
+
+- Meter usage at the job level.
+- Keep cost computation simple and transparent.
+- Support future Stripe integration.
+- Provide per-user and per-job visibility.
+
+---
+
+## 1. Billing Units
+
+- **GPU hours**
+- **Rows processed** (for audit)
+- **Tokens generated / evaluated**
+- **Deployments per month**
+
+---
+
+## 2. Base Pricing (Configurable)
+
+Defaults (can be tuned): 
+
+- Audit: `$0.20 / 1,000 rows`
+- Data generation: `$0.30 / 1M tokens`
+- Train (A100): `$1.25 / GPU hour`
+- Evaluate: `$0.10 / 100 samples`
+- Deploy: `$2 / month per deployment`
+
+All numbers are config-driven.
+
+---
+
+## 3. Usage Capture Per Job
+
+### Generate Job
+
+Metrics: 
+
+- `tokens_generated`
+- `teacher_model`
+- `duration_sec`
+
+Cost: 
+
+```text
+cost_generate = (tokens_generated / 1_000_000) * PRICE_PER_MILLION_GENERATION_TOKENS
+````text
+
+---
+
+### Audit Job
+
+Metrics: 
+
+* `rows_processed`
+* `tokens_used` (optional)
+* `duration_sec`
+
+Cost: 
+
+```text
+cost_audit = (rows_processed / 1000) * PRICE_AUDIT_PER_1000_ROWS
+```text
+
+---
+
+### Distill Job
+
+Metrics: 
+
+* `tokens_generated` (student data)
+* `num_pairs`
+
+Cost: 
+
+```text
+cost_distill = (tokens_generated / 1_000_000) * PRICE_DISTILL_PER_1M_TOKENS
+```text
+
+(or could be merged with generation pricing.)
+
+---
+
+### Train Job
+
+Metrics: 
+
+* `gpu_hours`
+* `gpu_type`
+* `num_steps`
+* `dataset_size`
+
+Cost: 
+
+```text
+cost_train = gpu_hours * PRICE_PER_GPU_HOUR[gpu_type]
+```text
+
+---
+
+### Evaluate Job
+
+Metrics: 
+
+* `samples_evaluated`
+* `tokens_used`
+
+Cost: 
+
+```text
+cost_eval = (samples_evaluated / 100) * PRICE_EVAL_PER_100_SAMPLES
+```text
+
+---
+
+### Deploy Job
+
+Metrics: 
+
+* `deployment_lifetime_days`
+* `avg_qps` (optional later)
+
+Cost: 
+
+```text
+cost_deploy = MONTHLY_DEPLOY_BASE_FEE * (days_active / 30.0)
+```text
+
+---
+
+## 4. Billing Record Schema
+
+```json
+{
+  "job_id": "job_train_91ba0b50","
+  "user_id": "user_abc","
+  "job_type": "train","
+  "metrics": "{ "
+    "gpu_hours": "3.2,"
+    "tokens_generated": "2500000,"
+    "rows_processed": "0,"
+    "samples_evaluated": "0"
+  },
+  "unit_costs": "{ "
+    "gpu_hour": "1.25,"
+    "generation_per_1m_tokens": "0.3,"
+    "audit_per_1k_rows": "0.2,"
+    "eval_per_100_samples": "0.1"
+  },
+  "cost_breakdown": "{ "
+    "gpu": "4.0,"
+    "generation": "0.0,"
+    "audit": "0.0,"
+    "eval": "0.0,"
+    "deploy": "0.0"
+  },
+  "total_cost_usd": "4.0,"
+  "created_at": "2025-11-22T03:15:00Z"
+}
+```text
+
+Stored in DB table and/or JSON file under: 
+
+```text
+billing/records/<user_id>/<job_id>.json
+```text
+
+---
+
+## 5. Aggregation
+
+### Per-User Monthly Summary
+
+* sum `total_cost_usd` for all jobs in period.
+* group by job_type for breakdown.
+
+Shape: 
+
+```json
+{
+  "user_id": "user_abc","
+  "period": "2025-11","
+  "total_cost_usd": "123.45,"
+  "by_job_type": "{ "
+    "generate": "20.0,"
+    "audit": "10.5,"
+    "distill": "15.0,"
+    "train": "70.0,"
+    "evaluate": "5.0,"
+    "deploy": "2.0"
+  }
+}
+```text
+
+---
+
+## 6. Stripe Integration (Future)
+
+* Each user has `stripe_customer_id`.
+* Monthly cron: 
+
+  * compute monthly summary
+  * create invoice via Stripe
+* Keep initial version usage-only reporting without automatic charging if needed.
+
+---
+
+## 7. Frontend Exposure
+
+On billing page: 
+
+* list jobs with: 
+
+  * job_id
+  * type
+  * cost
+  * timestamp
+* show monthly total.
+* show GPU hours and tokens in summary.
+
+---
+
+````text
+
+---
+
+## `provenance_spec.md`
+
+```markdown
+# Nexa Forge Provenance Specification (v1.0)
+
+Defines how Nexa Forge tracks lineage and metadata of datasets, models, and evaluations.
+
+---
+
+## 0. Goals
+
+- Provide full data and model lineage.
+- Enable reproducibility of jobs.
+- Build trust with clients.
+- Support scientific workflows (Atheron Labs).
+
+---
+
+## 1. What Has Provenance?
+
+Artifacts with provenance: 
+
+- Raw datasets
+- Scored/audited datasets
+- Distilled datasets
+- Trained checkpoints
+- Evaluation reports
+- Deployments
+
+Each artifact has a `manifest.json`.
+
+---
+
+## 2. Manifest Location
+
+For a given artifact: 
+
+```text
+artifacts/
+  datasets/
+    ds_123/
+      raw.parquet
+      scored.parquet
+      manifest.json
+  distill/
+    ds_123d/
+      sft.parquet
+      manifest.json
+  checkpoints/
+    ckpt_456/
+      model.pt
+      tokenizer/
+      config.json
+      metrics.json
+      manifest.json
+  evals/
+    ev_789/
+      report.json
+      manifest.json
+  deployments/
+    dp_012/
+      config.json
+      manifest.json
+````text
+
+---
+
+## 3. Manifest Schema (Generic)
+
+```json
+{
+  "artifact_type": "dataset | checkpoint | eval | deployment","
+  "artifact_id": "ds_123d","
+  "created_at": "2025-11-22T03:14:12Z","
+  "created_by": "nexa-forge","
+  "user_id": "user_abc","
+
+  "source_jobs": "["job_distill_0cdc0318"],"
+  "source_artifacts": "["ds_123"],"
+
+  "job_params": "{ "
+    "teacher": "nexa-psi-10b","
+    "task": "qa","
+    "epochs": "3,"
+    "lr": "2e-5"
+  },
+
+  "base_model": "nexa-psi-10b","
+  "dataset_used": "ds_123d","
+  "git_commit": "d81fe7a","
+
+  "metrics": "{ "
+    "quality_score": "4.2,"
+    "eval_score_overall": "4.4"
+  },
+
+  "cost_estimate_usd": "3.12,"
+  "notes": ""
+}
+```text
+
+Fields vary by `artifact_type`.
+
+---
+
+## 4. Dataset Manifest
+
+Additional fields: 
+
+```json
+{
+  "artifact_type": "dataset","
+  "num_rows": "5000,"
+  "schema": "{ "
+    "columns": "["
+      { "name": "instruction", "dtype": "string" },"
+      { "name": "output", "dtype": "string" }"
+    ]
+  },
+  "quality": "{ "
+    "clarity_mean": "4.5,"
+    "correctness_mean": "4.4,"
+    "educational_mean": "3.9,"
+    "quality_tier": "A-"
+  }
+}
+```text
+
+---
+
+## 5. Checkpoint Manifest
+
+Additional: 
+
+```json
+{
+  "artifact_type": "checkpoint","
+  "parameter_count": "10000000000,"
+  "architecture": "decoder_only_transformer","
+  "base_model": "nexa-psi-10b","
+  "training_data": "["ds_123d"],"
+  "training_steps": "5000,"
+  "training_epochs": "3,"
+  "optimizer": "adamw","
+  "lr": "2e-5"
+}
+```text
+
+---
+
+## 6. Eval Manifest
+
+Additional: 
+
+```json
+{
+  "artifact_type": "eval","
+  "eval_id": "ev_789","
+  "checkpoint_id": "ckpt_456","
+  "datasets": "["eval_bench_v1"],"
+  "scores": "{ "
+    "overall": "4.4,"
+    "helpfulness": "4.3,"
+    "correctness": "4.5,"
+    "style": "4.2"
+  }
+}
+```text
+
+---
+
+## 7. Deployment Manifest
+
+Additional: 
+
+```json
+{
+  "artifact_type": "deployment","
+  "deployment_id": "dp_012","
+  "checkpoint_id": "ckpt_456","
+  "inference_url": "https://models.nexa.run/dp_012","
+  "created_at": "2025-11-22T05:12:00Z","
+  "status": "active","
+  "scaling": "{ "
+    "min_replicas": "1,"
+    "max_replicas": "3"
+  }
+}
+```text
+
+---
+
+## 8. Integration Points
+
+* On job completion: 
+
+  * backend writes manifest.json.
+* Frontend: 
+
+  * job detail page reads and summarizes manifest.
+* Clients: 
+
+  * can download manifest for internal records.
+
+---
+
+## 9. Relation to Billing
+
+* `cost_estimate_usd` in manifest links to billing records.
+* Cross-reference via `job_id` and `artifact_id`.
+
+---
+
+````text
+
+---
+
+## `sdk_spec.md`
+
+```markdown
+# Nexa Forge SDK Specification (v1.0)
+
+Defines the Python SDK interface for interacting with Nexa Forge.
+
+---
+
+## 0. Goals
+
+- Provide a thin, ergonomic API wrapper.
+- Hide HTTP and auth details.
+- Keep surface area small and stable.
+- Support both sync and simple polling.
+
+---
+
+## 1. Installation
+
+```bash
+pip install nexa-forge
+````text
+
+Package name (example): `nexa_forge`.
+
+---
+
+## 2. Core Concepts
+
+* `ForgeClient` – main entry point.
+* `Job` – representation of a server-side job.
+* `Artifact` – representation of dataset/checkpoint/eval artifacts.
+
+---
+
+## 3. Client Initialization
+
+```python
+from nexa_forge import ForgeClient
+
+client = ForgeClient(
+    api_key="YOUR_API_KEY",
+    base_url="https: "//api.nexa-forge.dev"
+)
+```text
+
+Environment variable fallback: 
+
+* `NEXA_FORGE_API_KEY`
+* `NEXA_FORGE_BASE_URL`
+
+---
+
+## 4. Methods
+
+### 4.1 `generate(...)`
+
+```python
+job = client.generate(
+    task="qa",
+    size=5000,
+    teacher="nexa-psi-10b",
+    domain="molecular_science",
+    style="instruction"
+)
+print(job.job_id)
+```text
+
+Args: 
+
+* `task: str`
+* `size: int`
+* `teacher: str`
+* `domain: Optional[str]`
+* `style: Optional[str]`
+
+---
+
+### 4.2 `audit(dataset_uri: str)`
+
+```python
+job = client.audit("s3: "//bucket/dataset.parquet")"
+```text
+
+Returns `Job`.
+
+---
+
+### 4.3 `distill(dataset_id: str, teacher: str)`
+
+```python
+job = client.distill("ds_123", teacher="nexa-psi-10b")
+```text
+
+---
+
+### 4.4 `train(dataset_id: str, model: str, epochs: int = 3)`
+
+```python
+job = client.train("ds_123d", model="Mistral-7B", epochs=3)
+```text
+
+---
+
+### 4.5 `evaluate(checkpoint_id: str)`
+
+```python
+job = client.evaluate("ckpt_456")
+```text
+
+---
+
+### 4.6 `deploy(checkpoint_id: str)`
+
+```python
+job = client.deploy("ckpt_456")
+```text
+
+---
+
+### 4.7 `status(job_id: str)`
+
+```python
+status = client.status(job.job_id)
+print(status.status, status.result)
+```text
+
+---
+
+### 4.8 `wait(job_id: str, poll_interval: float = 5.0)`
+
+Utility: 
+
+```python
+result = client.wait(job.job_id)
+print(result.status, result.result)
+```text
+
+* Polls `/status/{job_id}` until `completed` or `failed`.
+
+---
+
+### 4.9 `get_artifacts(job_id: str)`
+
+Returns artifact metadata and URIs (dataset, checkpoint, eval).
+
+---
+
+## 5. Data Models (Python)
+
+```python
+class JobStatus(str, Enum): ""
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+class Job(BaseModel): ""
+    job_id: "str"
+    job_type: "str"
+    status: "JobStatus"
+    result: "Optional[Dict[str, Any]]"
+    error: "Optional[str]"
+    created_at: "datetime"
+    started_at: "Optional[datetime]"
+    completed_at: "Optional[datetime]"
+
+class Artifact(BaseModel): ""
+    artifact_id: "str"
+    artifact_type: "str"
+    uri: "str"
+    manifest: "Dict[str, Any]"
+```text
+
+---
+
+## 6. Error Handling
+
+```text
+* HTTP errors → `ForgeHTTPError`.
+* API-level errors → `ForgeAPIError`.
+```text
+* `client.wait` raises if job ultimately `failed`.
+
+---
+
+## 7. Example Usage (End-to-End)
+
+```python
+from nexa_forge import ForgeClient
+
+client = ForgeClient(api_key="...")
+
+# 1) Generate synthetic dataset
+gen_job = client.generate(
+    task="qa", size=2000, teacher="nexa-psi-10b",
+    domain="biology", style="instruction"
+)
+gen_result = client.wait(gen_job.job_id)
+
+dataset_id = gen_result.result["dataset_id"]
+
+# 2) Audit
+audit_job = client.audit(gen_result.result["dataset_uri"])
+client.wait(audit_job.job_id)
+
+# 3) Distill
+distill_job = client.distill(dataset_id, teacher="nexa-psi-10b")
+distill_result = client.wait(distill_job.job_id)
+
+# 4) Train
+train_job = client.train(distill_result.result["distilled_dataset_id"], "Mistral-7B", epochs=3)
+train_result = client.wait(train_job.job_id)
+
+# 5) Evaluate
+eval_job = client.evaluate(train_result.result["checkpoint_id"])
+eval_result = client.wait(eval_job.job_id)
+
+# 6) Deploy
+deploy_job = client.deploy(train_result.result["checkpoint_id"])
+deploy_result = client.wait(deploy_job.job_id)
+
+print("Inference URL: ", deploy_result.result["inference_url"])"
+```text
+
+---
+
+## 8. Future SDKs
+
+* JS/TS client.
+* CLI wrapper around SDK.
+* Optional Go/Rust clients.
+
+---
+
+````text
+
+---
+
+## `architecture.md`
+
+```markdown
+# Nexa Forge Architecture (v1.0)
+
+High-level architecture for the Nexa Forge platform and its relationship to NexaCompute and Atheron Labs.
+
+---
+
+## 0. Components
+
+- **Nexa Forge** – API + orchestration + dashboard.
+- **NexaCompute** – engine room: pipelines for generate / audit / distill / train / evaluate / deploy.
+- **GPU Workers** – A100/A10 instances (Prime Intellect, later owned racks).
+- **Frontend** – Next.js dashboard + docs.
+- **Atheron Labs** – research arm building scientific foundation models (e.g., molecular).
+
+---
+
+## 1. System Diagram
+
+```text
+          ┌──────────────────────────────┐
+          │          Frontend            │
+          │   (Next.js + Tailwind)       │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │        Nexa Forge API        │
+          │      (FastAPI on DO VPS)     │
+          ├──────────────────────────────┤
+          │  Auth / API Keys             │
+          │  Job Manager                 │
+          │  Queue (Redis/DB)           │
+          │  Worker Registry + Heartbeat │
+          │  Billing                     │
+          │  Artifact Registry           │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │          Workers             │
+          │     remote_worker.py         │
+          │ (Prime Intellect / racks)    │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │         NexaCompute          │
+          │   Pipelines & Engines        │
+          │   - generate                 │
+          │   - audit                    │
+          │   - distill                  │
+          │   - train                    │
+          │   - evaluate                 │
+          │   - deploy                   │
+          └──────────────┬───────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │   Artifacts + Provenance     │
+          │  (datasets, checkpoints,     │
+          │   evals, deployments)        │
+          └──────────────────────────────┘
+````text
+
+---
+
+## 2. Data Flow
+
+### BYOD Path
+
+1. User uploads dataset to their storage (S3, HF, etc.).
+2. Calls `/audit` with `dataset_uri`.
+```text
+3. Nexa Forge creates `audit` job → worker runs audit engine → writes scored dataset.
+4. User calls `/distill` → pipeline creates SFT dataset.
+5. User calls `/train` → pipeline trains new checkpoint.
+6. User calls `/evaluate` → evaluation results saved.
+7. User calls `/deploy` → model deployed.
+```text
+
+### Synthetic Path
+
+1. User calls `/generate`.
+2. Pipeline generates synthetic dataset.
+3. Optional: `/audit` + `/distill`.
+4. `/train`, `/evaluate`, `/deploy` as above.
+
+---
+
+## 3. Control Plane (DO VPS)
+
+* Runs: 
+
+  * FastAPI app
+  * Redis / DB
+  * Billing logic
+  * Worker registry
+* Stateless workers; all state is in DO-controlled storage.
+
+---
+
+## 4. Worker Plane (GPU Nodes)
+
+* Each worker runs `remote_worker.py`.
+* Workers: 
+
+  * Poll `/worker/next_job`.
+  * Run NexaCompute pipelines locally.
+  * Upload logs + artifacts (DO Spaces, S3, etc.).
+  * Send heartbeats.
+
+Workers can be: 
+
+* ephemeral (for cost control)
+* long-lived (for cluster-style operation)
+
+---
+
+## 5. Artifact & Provenance
+
+All outputs are written with: 
+
+* stable IDs
+* URIs
+* manifest.json (provenance)
+* references to source jobs
+
+Frontend and SDK expose these objects.
+
+---
+
+## 6. Security & Isolation
+
+* API keys for auth.
+* Jobs scoped per user.
+* No cross-tenant artifact visibility.
+* Future: 
+
+  * IP-allowlists
+  * Org/team management
+  * Role-based access.
+
+---
+
+## 7. Atheron Labs Integration
+
+Revenue path: 
+
+```text
+* Nexa Forge → generates income from: ""
+```text
+
+  * training
+  * distillation
+  * deployment
+* Revenue funds: 
+
+  * Atheron Labs
+  * scientific foundation models (e.g. Nexa Molecular)
+  * GPU cluster CAPEX.
+
+Scientific outputs (models, datasets) can be: 
+
+* published publicly
+* licensed
+* integrated back into Forge as: 
+
+  * better teachers
+  * better evals
+  * better agents.
+
+---
+
+````text
+
+---
+
+## `nexa_forge_branding.md`
+
+```markdown
+# Nexa Forge Branding (v1.0)
+
+Brand identity guidelines for Nexa Forge (product) and its relationship to Atheron Labs (lab).
+
+---
+
+## 0. Brand Positioning
+
+- **Nexa Forge** – the product: “The AI foundry.”
+- **Atheron Labs** – the lab: research + scientific frontier models.
+
+Nexa Forge is the commercial, user-facing platform.  
+Atheron Labs is the R&D engine behind it.
+
+---
+
+## 1. Name
+
+**Nexa Forge**
+
+- “Nexa” – connects to existing ecosystem (NexaCompute, NexaPsi).
+- “Forge” – models are forged like metal: refined, hardened, shaped.
+
+---
+
+## 2. Tagline Options
+
+- “Forge models. Forge intelligence. Forge science.”
+- “From raw data to deployed models.”
+- “End-to-end model manufacturing for serious builders.”
+
+---
+
+## 3. Visual Identity
+
+### Color Palette
+
+- `#0c1e3d` – deep navy (background)
+- `#1b1f27` – dark steel (surfaces)
+- `#3ff0ff` – neon cyan (accents)
+- `#ffffff` – white (primary text)
+- `#9ca3af` – gray (secondary text)
+
+### Layout Style
+
+- dark theme by default.
+- cards with subtle shadows.
+- generous spacing, minimal clutter.
+- tables with clear, high-contrast borders.
+
+---
+
+## 4. Fonts
+
+- Primary: Inter or system UI fonts (San Francisco, Segoe UI).
+- Use monospaced font for: 
+  - code blocks
+  - logs
+  - job IDs
+  - URIs
+
+---
+
+## 5. Iconography & Motifs
+
+- Foreground: 
+  - blueprint lines
+  - stylized forge/anvil symbol
+  - circuit patterns
+- Background: 
+  - faint lattice / mesh patterns
+  - scientific diagrams or subtle graphs.
+
+---
+
+## 6. Tone of Voice
+
+- precise
+- technically confident
+- calm
+- scientific, not hype-driven
+
+Examples: 
+
+- “Submit a dataset, get a deployed model.”
+- “Every run is auditable. Every model has provenance.”
+- “We handle the orchestration. You handle the ideas.”
+
+---
+
+## 7. Brand Uses
+
+- **Frontend**: 
+  - consistent colors & typography.
+  - Nexa Forge logo in top-left.
+- **Docs**: 
+  - clean typographic hierarchy.
+  - code snippets with monospace emphasizing usage.
+- **Decks / Pitches**: 
+  - emphasize Forge as a platform, Atheron Labs as the frontier research arm.
+
+---
+
+## 8. Relationship to Atheron Labs
+
+- Atheron Labs tagline ideas: 
+  - “Scientific intelligence, engineered.”
+  - “Foundation models for molecular science.”
+- Logo pairing: 
+  - Nexa Forge logo for product materials.
+  - “Powered by Atheron Labs” in footer.
+
+---
+````text
+
+---
+
+## `client_onboarding.md`
+
+````markdown
+# Nexa Forge Client Onboarding (v1.0)
+
+Standardized flow for bringing a new client onto Nexa Forge.
+
+---
+
+## 0. Objectives
+
+- Make it easy for clients to: 
+  - understand what Nexa Forge does.
+  - run their first pipeline.
+  - see value quickly.
+- Minimize your manual overhead.
+
+---
+
+## 1. Onboarding Steps (High-Level)
+
+1. Intro / scoping call.
+2. Account + API key creation.
+3. First run (BYOD or synthetic).
+4. Walkthrough of dashboard and artifacts.
+5. Agreement on ongoing usage and pricing.
+
+---
+
+## 2. Step 1 — Intro / Scoping Call
+
+Topics: 
+
+- Domain (e.g., customer support, biology, finance).
+- Data situation: 
+  - structured dataset?
+  - transcripts?
+  - documents?
+- Goals: 
+  - better responses?
+  - domain adaptation?
+  - scientific reasoning?
+- Constraints: 
+  - privacy / compliance
+  - budget
+  - GPU usage tolerance
+
+Output: a short summary document with:
+
+- recommended pipeline (BYOD vs synthetic).
+- target model size.
+- expected cost.
+
+---
+
+## 3. Step 2 — Account + API Key
+
+Process: 
+
+- Create user in Nexa Forge system.
+- Generate `api_key`.
+- Share: 
+  - API URL
+  - API key
+  - link to docs and SDK.
+
+Provide a minimal starter script: 
+
+```python
+from nexa_forge import ForgeClient
+
+client = ForgeClient(api_key="YOUR_KEY")
+
+job = client.audit("s3: "//bucket/path/to/data.parquet")"
+print("Job ID: ", job.job_id)"
+````text
+
+---
+
+## 4. Step 3 — First Run
+
+Two possible flows: 
+
+### BYOD Flow
+
+* Client points Nexa Forge to their dataset (`dataset_uri`).
+* You: 
+
+  * configure audit + distill + train steps.
+* Run: 
+
+  * audit
+  * distill
+  * train
+* Show them results in dashboard.
+
+### Synthetic Flow
+
+* Client doesn’t have data or wants synthetic.
+* Use `/generate` (with NexaPsi teacher).
+* Then follow the same pipeline.
+
+---
+
+## 5. Step 4 — Dashboard Walkthrough
+
+Show: 
+
+* job history
+* training runs
+* data audit results
+* cost overview
+* provenance manifests for key artifacts
+
+Objective: make it clear they can trust the system and inspect outputs.
+
+---
+
+## 6. Step 5 — Agreement on Usage
+
+Options: 
+
+* **Per-job pricing**: 
+
+  * simple for pilots.
+* **Monthly retainer + usage cap**: 
+
+  * ideal for recurring work.
+* **Project-based**: 
+
+  * bespoke ML projects (end-to-end).
+
+Document: 
+
+* expected job volume
+* model families to use
+* data privacy expectations
+* delivery timelines for major jobs.
+
+---
+
+## 7. Repeatability
+
+For each new client: 
+
+* reuse the same scripts & templates.
+* adjust only: 
+
+  * dataset URIs
+  * model choices
+  * minor hyperparameters.
+
+Nexa Forge backend remains unchanged.
+
+---
+
+````text
+
+---
+
+## `consulting_workflows.md`
+
+```markdown
+# Nexa Forge Consulting Workflows (v1.0)
+
+How to use Nexa Forge as the backbone of a scalable ML consulting practice.
+
+---
+
+## 0. Consulting Pillars
+
+Consulting offerings based on Nexa Forge: 
+
+```text
+- **Data → Model**: ""
+```text
+  - audit, distill, fine-tune, deploy.
+```text
+- **Model → Agent**: ""
+```text
+  - agents layered on top of NexaPsi or client-tuned models.
+```text
+- **Science → Foundation**: ""
+```text
+  - domain-specific models for research areas (biology, chemistry, molecular).
+
+---
+
+## 1. Engagement Types
+
+### 1.1 Fixed-Scope Model Build
+
+- Inputs: 
+  - dataset
+  - domain
+  - goals
+- Deliverables: 
+  - tuned model checkpoint
+  - deployed endpoint
+  - evaluation report
+  - provenance + cost breakdown
+
+Nexa Forge pipeline: 
+
+```text
+- `/audit` → `/distill` → `/train` → `/evaluate` → `/deploy`.
+```text
+
+---
+
+### 1.2 Ongoing Model Operations
+
+- Continuous training and re-training.
+- Delayed deployment (A/B testing, new versions).
+- Monitoring via: 
+  - eval jobs
+  - dashboards
+  - cost control.
+
+Use Nexa Forge as: 
+
+- training engine
+- eval engine
+- artifact history browser.
+
+---
+
+### 1.3 Synthetic Data Factory
+
+- Clients without enough data.
+- Use `/generate` to create synthetic tasks.
+- Optional mixing with client’s real data.
+- Provide them: 
+  - synthetic dataset
+  - tuned model
+  - evaluation.
+
+Charge for: 
+
+- generation
+- training
+- support.
+
+---
+
+### 1.4 Scientific Model Contracts (Atheron Labs)
+
+- Long-term R&D for: 
+  - molecular science
+  - materials
+  - other SciML domains.
+- Nexa Forge pipeline is used internally to: 
+  - generate data
+  - train models
+  - evaluate them.
+- Results delivered as: 
+  - models
+  - datasets
+  - technical reports.
+
+---
+
+## 2. Delivery Flow
+
+1. Scoping and proposal.
+2. Contract (scope + usage limits + billing).
+3. Execute via Nexa Forge pipelines.
+4. Deliver artifacts (models + docs).
+5. Ongoing support via repeat runs.
+
+---
+
+## 3. Pricing Structures
+
+- **Per-run pricing**: 
+  - ideal for smaller clients or pilots.
+- **Retainer + usage**: 
+  - monthly base + discounted GPU hours.
+- **Enterprise**: 
+  - SLA-backed, custom SKUs.
+
+Nexa Forge’s billing records give transparent usage backing.
+
+---
+
+## 4. Workflow Templates (Internal)
+
+Maintain: 
+
+- a library of: 
+  - audit + distill configs.
+  - training configs by model size.
+  - eval suites.
+
+Use these templates to avoid bespoke work each time.
+
+Example templates: 
+
+- `configs/workflows/support_bot.yaml`
+- `configs/workflows/scientific_assistant.yaml`
+- `configs/workflows/molecular_model.yaml`
+
+Each ties to: 
+
+- pipeline steps
+- default hyperparameters
+- expected hardware requirements.
+
+---
+
+## 5. Leverage
+
+The core insight: 
+
+- Nexa Forge handles: 
+  - infra
+  - orchestration
+  - reproducibility
+  - billing and logging.
+
+You handle: 
+
+- problem framing
+- model selection
+- pipeline configuration
+- client communication.
+
+This makes the consulting practice highly scalable.
+
+---
+````text
+
+```

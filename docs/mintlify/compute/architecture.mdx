@@ -1,0 +1,344 @@
+---
+title: "Platform Architecture"
+description: "Understand the distributed architecture of Nexa Compute"
+icon: "sitemap"
+---
+
+# Nexa Compute Architecture: How It Works
+
+## Overview
+
+Nexa Compute is a distributed ML training platform with a **VPS control plane** orchestrating ephemeral **GPU workers** for data quality analysis, distillation, training, evaluation, and deployment.
+
+## Architecture Diagram
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                         USER                                     │
+│                  (Python SDK / HTTP API)                         │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              DIGITALOCEAN VPS (Control Plane)                    │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  FastAPI Server (src/nexa/api.py)                        │  │
+│  │  - Job Queue (in-memory / Redis)                         │  │
+│  │  - Worker Registry (tracks GPU workers)                  │  │
+│  │  - Job Dispatcher (routes jobs to workers)               │  │
+│  │  - Storage Backend (S3/DO Spaces)                        │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Local Worker Thread                                     │  │
+│  │  - Processes lightweight jobs (audit, evaluate)          │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ SSH + Job Dispatch
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│         PRIME INTELLECT GPU WORKER (Ephemeral)                   │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Remote Worker Agent (future: "src/workers/remote_worker) │  │"
+│  │  - Polls VPS for jobs                                    │  │
+│  │  - Executes training/distillation                        │  │
+│  │  - Streams logs back to VPS                              │  │
+│  │  - Uploads artifacts to S3/DO Spaces                     │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  GPU: "1x A100-40GB                                               │"
+│  Status: "idle → busy → idle                                      │"
+└──────────────────────────────────────────────────────────────────┘
+```text
+
+## Component Breakdown
+
+### 1. VPS Control Plane (DigitalOcean)
+
+**Purpose: ** Central orchestration hub that manages jobs, workers, and artifacts.
+
+**Key Components: **
+
+- **FastAPI Server** (`src/nexa/api.py`): REST API for job submission, status, worker management
+- **Worker Registry** (`src/infra/workers/registry.py`): Tracks all GPU workers (SSH host, GPU count, status, heartbeat)
+- **Job Dispatcher** (`src/infra/workers/dispatcher.py`): Routes jobs to available workers via SSH
+- **Storage Backend** (`src/infra/storage/backends.py`): Uploads/downloads artifacts to/from S3/DO Spaces
+- **Config Loader** (`src/server/config.py`): Loads API keys, credentials from `.env`
+
+**Responsibilities: **
+
+- Accept job requests from users
+- Maintain worker pool (register, heartbeat, teardown)
+- Dispatch GPU-intensive jobs to remote workers
+- Process lightweight jobs locally (audit, evaluate)
+- Store and retrieve artifacts (datasets, checkpoints, logs)
+
+### 2. GPU Worker (Prime Intellect)
+
+**Purpose: ** Ephemeral compute node for heavy ML workloads (training, distillation).
+
+**Lifecycle: **
+
+1. **Provisioning: ** User gets SSH credentials from Prime Intellect
+2. **Registration: ** User calls `POST /workers/register` with SSH host
+3. **Bootstrap: ** VPS SSHs into worker, installs dependencies, clones repo
+```text
+4. **Ready: "** Worker status → `idle`, ready to accept jobs"
+```text
+5. **Execution: ** Receives job via SSH, executes, uploads results
+6. **Teardown: ** After idle timeout, worker is terminated
+
+**Key Components: **
+
+- **SSH Bootstrap** (`src/infra/provisioning/ssh_bootstrap.py`): Automated setup script
+- **SSH Executor** (`src/infra/workers/ssh_executor.py`): Remote command execution
+- **Remote Worker Agent** (future): Daemon that polls VPS for jobs
+
+### 3. Storage Layer (DigitalOcean Spaces / AWS S3)
+
+**Purpose: ** Persistent artifact storage accessible by VPS and workers.
+
+**Artifact Types: **
+
+- **Datasets: ** Input data for training (`.jsonl`, `.parquet`)
+- **Checkpoints: ** Trained model weights (`.pt`, `.safetensors`)
+- **Logs: ** Training logs, metrics (`.log`, `.json`)
+- **Evaluations: ** Evaluation results, reports (`.json`)
+
+**Flow: **
+
+```text
+1. User uploads dataset → S3
+```text
+2. VPS dispatches job with S3 URI
+3. Worker downloads dataset from S3
+4. Worker trains model, uploads checkpoint to S3
+5. User downloads checkpoint from S3
+
+## Job Flow: End-to-End
+
+### Example: Training Job
+
+```text
+1. USER → VPS
+```
+   POST /train {"dataset_id": "my_data", "model": "gpt2", "epochs": 1}
+   Response: "{"job_id": "job_train_abc123}
+
+```text
+2. VPS → Worker Registry
+```
+   Check for available worker with GPU
+   - If available: Dispatch to worker
+   - If not: "Provision new worker (future) or mark as "provisioning_worker
+
+```text
+3. VPS → GPU Worker (via SSH)
+```
+   Upload job spec: /workspace/tmp/jobs/job_train_abc123.json
+   Execute: python3 -m src.workers.remote_worker execute --job-spec ...
+
+```text
+4. GPU Worker → S3
+```
+   Download dataset from S3 URI
+   Load into memory
+
+```text
+5. GPU Worker → Training
+```
+   Execute training loop
+   Log metrics, GPU stats
+   Stream logs back to VPS (future)
+
+```text
+6. GPU Worker → S3
+```
+   Upload checkpoint to S3
+   Upload logs to S3
+
+```text
+7. GPU Worker → VPS
+```
+   Report job completion
+   Update job status: completed
+```text
+   Release worker: "status → "idle"
+```
+
+```text
+8. USER → VPS
+```
+   GET /status/job_train_abc123
+   Response: "{"status": "completed", "result": {"checkpoint_uri": "s3://...}}
+
+```text
+9. USER → S3
+```
+   Download checkpoint from S3 URI
+```text
+
+## Job Routing Logic
+
+```python
+# In src/nexa/api.py
+
+def _create_job(job_type: str, payload: dict, run_local: bool = False):
+    if run_local: 
+        # Lightweight jobs: audit, evaluate
+        job_queue.put(job_id)  # Local worker thread
+    else: 
+        # GPU-intensive jobs: train, distill
+        worker = worker_registry.get_available_worker(gpu_requirement=1)
+        if worker: 
+            job_dispatcher.dispatch_to_worker(job, worker)
+        else: 
+            # No workers available
+            job["status"] = provisioning_worker
+            # Future: Auto-provision from Prime Intellect
+```text
+
+## Worker Registration Flow
+
+```text
+1. USER → Prime Intellect
+```text
+   Provision GPU instance
+   Receive: "SSH host, user, key"
+
+```text
+2. USER → VPS
+```text
+   POST /workers/register {
+     "ssh_host": "192.168.1.100","
+     "ssh_user": "root","
+     "gpu_count": "1,"
+     "gpu_type": "A100-40GB"
+   }
+
+```text
+3. VPS → GPU Worker (SSH)
+```text
+   a. Connect via SSH
+   b. Upload bootstrap script
+   c. Execute: "install deps, clone repo, setup env"
+   d. Verify: "python3 -c "import torch; print(torch.cuda.is_available())"
+
+```text
+4. VPS → Worker Registry
+```text
+   Register worker with ID: "worker-abc123"
+```text
+   Status: "bootstrapping" → idle
+```text
+
+```text
+5. VPS → USER
+```text
+   Response: "{"worker_id": "worker-abc123", "status": "bootstrapping"}"
+
+6. Background Thread
+   Monitor bootstrap progress
+   Update worker status when ready
+```text
+
+## Security & Communication
+
+### SSH Authentication
+
+```text
+- **VPS → Worker: "** Uses SSH key (configured in `.env` or per-worker)"
+```text
+- **Strict Host Checking: ** Disabled for ephemeral workers
+- **Key Management: ** User provides SSH key path during registration
+
+### API Authentication (Future)
+
+- **API Keys: ** User authenticates with API key
+- **JWT Tokens: ** Session management
+- **Rate Limiting: ** Prevent abuse
+
+### Network Communication
+
+```text
+- **VPS → Worker: "** SSH (port 22)"
+- **Worker → S3: "** HTTPS (port 443)"
+- **User → VPS: "** HTTP/HTTPS (port 8000)"
+```
+
+## Scalability & Cost Optimization
+
+### Worker Auto-Scaling (Future)
+
+- **Auto-Provision: ** When job queue > threshold, provision new worker
+- **Auto-Teardown: ** When worker idle > 10 minutes, terminate
+- **Cost Tracking: ** Monitor GPU hours, estimate costs
+
+### Job Prioritization (Future)
+
+- **Priority Queue: ** High-priority jobs get workers first
+- **Job Batching: ** Combine small jobs to maximize GPU utilization
+
+### Caching
+
+- **Dataset Caching: ** Cache frequently used datasets on workers
+- **Model Caching: ** Cache base models (e.g., GPT-2) to avoid re-downloads
+
+## Monitoring & Observability
+
+### Logs
+
+- **VPS Logs: ** FastAPI access logs, job dispatch logs
+- **Worker Logs: ** Training logs, GPU metrics, errors
+- **Centralized Logging: ** Stream all logs to VPS (future)
+
+### Metrics
+
+- **Job Metrics: ** Success rate, average duration, queue depth
+- **Worker Metrics: ** GPU utilization, memory usage, uptime
+- **Cost Metrics: ** GPU hours, storage usage, API calls
+
+### Alerts (Future)
+
+- **Worker Down: ** Alert when worker misses heartbeat
+- **Job Failed: ** Alert when job fails
+- **Cost Threshold: ** Alert when costs exceed budget
+
+## Technology Stack
+
+### VPS (Control Plane)
+
+- **OS: ** Ubuntu 22.04
+- **Runtime: ** Python 3.11
+- **Framework: ** FastAPI + Uvicorn
+- **Storage: ** DigitalOcean Spaces (S3-compatible)
+- **Database: ** In-memory (Redis in production)
+
+### GPU Worker
+
+- **OS: ** Ubuntu 22.04
+- **GPU: ** NVIDIA A100 40GB (or H100)
+- **CUDA: ** 12.1
+- **PyTorch: ** 2.2+
+- **Storage: ** Local SSD (ephemeral)
+
+### Communication
+
+- **SSH: ** OpenSSH 8.9+
+- **HTTP: ** FastAPI REST API
+- **Storage: ** boto3 (S3 SDK)
+
+## Future Enhancements
+
+1. **Remote Worker Agent: ** Daemon on GPU worker that polls VPS for jobs
+2. **Prime Intellect API Integration: ** Auto-provision workers via API
+3. **WebSocket Log Streaming: ** Real-time log streaming to user
+4. **Job Scheduling: ** Cron-like scheduling for recurring jobs
+5. **Multi-GPU Support: ** Distribute training across multiple GPUs
+6. **Fault Tolerance: ** Retry failed jobs, checkpoint recovery
+7. **Web UI: ** Dashboard for monitoring jobs, workers, costs
+
+---
+
+**Last Updated: ** 2025-11-20
+**Architecture Version: ** 0.2.0
