@@ -1,0 +1,4 @@
+[
+  {"id": "google/gemini-2.5-pro", "type": "openrouter", "parameters": {"max_workers": 12}},
+  {"id": "openai/gpt-5", "type": "openrouter", "parameters": {"max_workers": 3}}
+]

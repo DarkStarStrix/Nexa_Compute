@@ -1,0 +1,55 @@
+---
+title: 'API Reference'
+description: 'Complete REST API documentation'
+---
+
+# API Reference
+
+All Nexa Forge endpoints require an API key in the `X-Nexa-Api-Key` header.
+
+## Authentication
+```bash
+curl -H "X-Nexa-Api-Key: YOUR_KEY" https://api.nexa.ai/auth/ping
+```text
+
+## Jobs
+### Submit a Job
+`POST /api/jobs/{job_type}`
+Supported job types: generate, audit, distill, train, evaluate, deploy.
+
+```python
+from nexa_forge import NexaForgeClient
+client = NexaForgeClient(api_key="YOUR_KEY")
+job = client.train(model="gpt2", dataset_id="my_data", epochs=1)
+```text
+
+### Get Job Status
+`GET /api/jobs/{job_id}`
+Returns status, logs, and result URLs.
+
+```bash
+curl -H "X-Nexa-Api-Key: YOUR_KEY" https://api.nexa.ai/api/jobs/12345
+```text
+
+## Workers
+### Register Worker
+`POST /api/workers/register`
+Provide SSH host, user, and GPU specs.
+
+```json
+{
+  "ssh_host": "34.12.34.56",
+  "ssh_user": "root",
+  "gpu_count": 1,
+  "gpu_type": "A100-40GB"
+}
+```text
+
+## Billing
+### Summary
+`GET /api/billing/summary`
+Shows usage and cost breakdown.
+
+```bash
+curl -H "X-Nexa-Api-Key: YOUR_KEY" https://api.nexa.ai/api/billing/summary
+```

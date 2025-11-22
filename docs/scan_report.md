@@ -1,0 +1,380 @@
+# Repository Scan Report for Spec_Nexa_2.md
+
+## References found
+
+- docs.json:3157 – `training pipeline` → r the data, distillation, and training pipeline.",         "files": [
+- orchestrate.py:4555 – `model inference` → ve"), ) -> None:     """Serve model inference via FastAPI."""     from nexa
+- README.md:11643 – `model inference` → hestrate.py teardown ```  ### Model Inference  ```bash # Start inference se
+- README.md:13124 – `evaluation metrics` → /models/registry.py` 3. **Add evaluation metrics:** Extend `nexa_eval/judge.py
+- nexa_inference/server.py:1194 – `model inference` → er:     """FastAPI server for model inference."""          def __init__(sel
+- nexa_inference/server.py:4446 – `model inference` → output = f"Model inference for: {request.prompt[:100]}..
+- nexa_inference/cli.py:633 – `model inference` → ])"), ) -> None:     """Serve model inference via FastAPI."""     if checkp
+- nexa_inference/checkpoints/falcon3_qlora_v1/README.md:770 – `evaluation metrics` → ata processing logs - : Final evaluation metrics (validation + test)  ## Key F
+- nexa_inference/checkpoints/falcon3_qlora_v1/README.md:881 – `evaluation metrics` → LoRA configuration - : Final evaluation metrics - : Full checkpoint with opti
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer_config.json:435 – `introduction` → "2": {       "content": ">>INTRODUCTION<<",       "lstrip": false,
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer_config.json:361665 – `introduction` → ",     ">>ABSTRACT<<",     ">>INTRODUCTION<<",     ">>SUMMARY<<",     ">
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/special_tokens_map.json:79 – `introduction` → ",     ">>ABSTRACT<<",     ">>INTRODUCTION<<",     ">>SUMMARY<<",     ">
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:489 – `introduction` → "id": 2,       "content": ">>INTRODUCTION<<",       "single_word": fals
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:382693 – `introduction` → ">>ABSTRACT<<": 1,       ">>INTRODUCTION<<": 2,       ">>SUMMARY<<": 3
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:654179 – `introduction` → "ĠTax": 11884,       "Ġintroduction": 11885,       "Ġsees": 11886
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:926505 – `introduction` → "ĠBoe": 23531,       "ĠIntroduction": 23532,       "WORD": 23533,
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:1227270 – `introduction` → ,       "Dump": 36288,       "Introduction": 36289,       "ĠBills": 3629
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:1636827 – `introduction` → "ĠMigr": 53463,       "Ġintroductions": 53464,       "Ġceremonial"
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:1751538 – `introduction` → 1,       "ELS": 58242,       "introduction": 58243,       "lian": 58244,
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:3524677 – `introduction` → "Ġhonda": 130135,       "Ġreintroduction": 130136,       "Ġdevalued":
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:9545228 – `introduction` → [         "Ġre",         "introduction"       ],       [         "Ġd
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:667371 – `conclusion` → "Ġacknowled": 12460,       "Ġconclusion": 12461,       "Ġactor": 1246
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:886417 – `conclusion` → "NoError": 21832,       "Ġconclusions": 21833,       "isecond": 21
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:1711708 – `conclusion` → "ĠYelp": 56589,       "Conclusion": 56590,       "ĠGenerates":
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:1727333 – `conclusion` → "Ġdepletion": 57240,       "ĠConclusion": 57241,       "Ġtiempos": 57
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:2480994 – `conclusion` → ntercultural": 88504,       "ĠConclusions": 88505,       "decay": 8850
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:2687903 – `conclusion` → indeterminate": 97037,       "Conclusions": 97038,       "ĠElie": 9703
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/tokenizer.json:3365320 – `conclusion` → "ĠAngl": 123875,       "ĠCONCLUSION": 123876,       "ĠOverlook":
+- nexa_inference/checkpoints/falcon3_qlora_v1/checkpoint-200/README.md:3448 – `evaluation metrics` → # Metrics  <!-- These are the evaluation metrics being used, ideally with a de
+- nexa_train/train.py:42 – `training pipeline` → entrypoints wrapping the core training pipeline."""  from __future__ import a
+- nexa_data/schemas/finalreport_schema.py:4469 – `conclusion` → ernal evidence supporting the conclusions.",     )     limitations: Li
+- nexa_data/feedback/weakness_analysis.py:48 – `evaluation metrics` → ht weakness analysis based on evaluation metrics."""  from __future__ import a
+- docs/Spec_Nexa_2.md:39 – `introduction` → xa_2  ## Table of Contents - [Introduction](#introduction) - [Data Quali
+- docs/Spec_Nexa_2.md:54 – `introduction` → of Contents - [Introduction](#introduction) - [Data Quality](#data-quali
+- docs/Spec_Nexa_2.md:304 – `introduction` → [Conclusion](#conclusion)  ## Introduction *Provide a brief overview of
+- docs/Spec_Nexa_2.md:71 – `data quality` → troduction](#introduction) - [Data Quality](#data-quality) - [Distillati
+- docs/Spec_Nexa_2.md:377 – `data quality` → he Nexa 2 specification.*  ## Data Quality *Details about data quality r
+- docs/Spec_Nexa_2.md:405 – `data quality` → # Data Quality *Details about data quality requirements and checks.*  ##
+- docs/Spec_Nexa_2.md:103 – `distillation process` → ta Quality](#data-quality) - [Distillation Process](#distillation-process) - [Mo
+- docs/Spec_Nexa_2.md:448 – `distillation process` → requirements and checks.*  ## Distillation Process *Explanation of the model dis
+- docs/Spec_Nexa_2.md:151 – `model inference` → ss](#distillation-process) - [Model Inference](#model-inference) - [Trainin
+- docs/Spec_Nexa_2.md:526 – `model inference` → istillation methodology.*  ## Model Inference *Guidelines for inference, pe
+- docs/Spec_Nexa_2.md:189 – `training pipeline` → ference](#model-inference) - [Training Pipeline](#training-pipeline) - [Evalu
+- docs/Spec_Nexa_2.md:616 – `training pipeline` → tations, and deployment.*  ## Training Pipeline *Description of the training
+- docs/Spec_Nexa_2.md:231 – `evaluation metrics` → eline](#training-pipeline) - [Evaluation Metrics](#evaluation-metrics) - [Conc
+- docs/Spec_Nexa_2.md:710 – `evaluation metrics` → rameters, and resources.*  ## Evaluation Metrics *Metrics and benchmarks used
+- docs/Spec_Nexa_2.md:275 – `conclusion` → rics](#evaluation-metrics) - [Conclusion](#conclusion)  ## Introductio
+- docs/Spec_Nexa_2.md:288 – `conclusion` → tion-metrics) - [Conclusion](#conclusion)  ## Introduction *Provide a
+- docs/Spec_Nexa_2.md:794 – `conclusion` → luate model performance.*  ## Conclusion *Summary and next steps.*
+- docs/FALCON3_DISTILLATION_ROI.md:6000 – `conclusion` → . 🔄 **Deploy & monetize**  ## Conclusion  **Investment:** $125-150   *
+- docs/TODAY_SUMMARY.md:5162 – `training pipeline` → ──────┐ │                     Training Pipeline                         │ ├──
+- docs/Evals.md:10430 – `data quality` → tion-ready visualizations ✅ **Data Quality Tracking**: Truncation detect
+- docs/Evals.md:11412 – `evaluation metrics` → uently truncate 2. **Add more evaluation metrics** (e.g., citation quality, re
+- docs/Evals.md:10132 – `conclusion` → ws  ---  ## 6. Key Insights & Conclusions  ### 6.1 Evaluation System S
+- docs/Overview_of_Project/RUNBOOK.md:5016 – `training pipeline` → ## Common Workflows  ### Full Training Pipeline 1. Prepare data: `python -m n
+- docs/Overview_of_Project/RUNBOOK.md:3789 – `evaluation metrics` → tifacts. - **metrics:** Final evaluation metrics (accuracy, loss, etc.). - **c
+- docs/Overview_of_Project/Nexa_compute_roadmap.md:313 – `introduction` → , distillation-ready  ---  ## Introduction  NexaCompute is designed as a
+- nexa_eval/toolproto.py:1163 – `evaluation metrics` → tionSummary:     """Aggregate evaluation metrics."""      conversations: int
+- .venv/lib/python3.11/site-packages/networkx/linalg/algebraicconnectivity.py:20826 – `introduction` → M. E. J Newman 'Networks: An Introduction', pages 364-370        Oxford
+- .venv/lib/python3.11/site-packages/networkx/algorithms/dag.py:8062 – `introduction` → description and proof in     "Introduction to Algorithms: A Creative App
+- .venv/lib/python3.11/site-packages/networkx/algorithms/dag.py:8278 – `introduction` → 1] Manber, U. (1989).        *Introduction to Algorithms - A Creative Ap
+- .venv/lib/python3.11/site-packages/networkx/algorithms/dag.py:12091 – `introduction` → description and proof in     "Introduction to Algorithms: A Creative App
+- .venv/lib/python3.11/site-packages/networkx/algorithms/dag.py:12264 – `introduction` → 1] Manber, U. (1989).        *Introduction to Algorithms - A Creative Ap
+- .venv/lib/python3.11/site-packages/networkx/algorithms/polynomials.py:5754 – `introduction` → .. [6] D. B. West,        "Introduction to Graph Theory," p. 84     .
+- .venv/lib/python3.11/site-packages/networkx/algorithms/polynomials.py:5831 – `introduction` → G. Coutinho,        "A brief introduction to the Tutte polynomial"
+- .venv/lib/python3.11/site-packages/networkx/algorithms/polynomials.py:9716 – `introduction` → .. [1] D. B. West,        "Introduction to Graph Theory," p. 222
+- .venv/lib/python3.11/site-packages/networkx/algorithms/polynomials.py:9945 – `introduction` → .. [3] D. B. West,        "Introduction to Graph Theory," p. 221
+- .venv/lib/python3.11/site-packages/networkx/algorithms/polynomials.py:10027 – `introduction` → Zhang, J. Goodall,        "An Introduction to Chromatic Polynomials"
+- .venv/lib/python3.11/site-packages/networkx/algorithms/polynomials.py:10177 – `introduction` → .. [5] R. C. Read,        "An Introduction to Chromatic Polynomials"
+- .venv/lib/python3.11/site-packages/networkx/algorithms/isomorphism/isomorphvf2.py:252 – `introduction` → sm.is_isomorphic>` function.  Introduction ------------  The GraphMatche
+- .venv/lib/python3.11/site-packages/networkx/algorithms/isomorphism/vf2pp.py:446 – `introduction` → n two graphs, if isomorphic.  Introduction ------------ The VF2++ algori
+- .venv/lib/python3.11/site-packages/networkx/algorithms/isomorphism/temporalisomorphvf2.py:686 – `introduction` → es a sense of directed flow.  Introduction ------------  The TimeRespect
+- .venv/lib/python3.11/site-packages/networkx/algorithms/centrality/katz.py:4641 – `introduction` → . Newman:        Networks: An Introduction.        Oxford University Pre
+- .venv/lib/python3.11/site-packages/networkx/algorithms/centrality/katz.py:9846 – `introduction` → . Newman:        Networks: An Introduction.        Oxford University Pre
+- .venv/lib/python3.11/site-packages/networkx/algorithms/community/local.py:413 – `introduction` → infeasable  [1]_ Gives a good introduction and overview of LCD  Referenc
+- .venv/lib/python3.11/site-packages/networkx/algorithms/community/modularity_max.py:2305 – `introduction` → ewman, M. E. J. "Networks: An Introduction", page 224        Oxford Univ
+- .venv/lib/python3.11/site-packages/networkx/algorithms/community/modularity_max.py:11922 – `introduction` → ewman, M. E. J. "Networks: An Introduction", page 224        Oxford Univ
+- .venv/lib/python3.11/site-packages/networkx/algorithms/community/quality.py:7262 – `introduction` → M. E. J. Newman "Networks: An Introduction", page 224.        Oxford Uni
+- .venv/lib/python3.11/site-packages/networkx/utils/mapped_queue.py:5107 – `introduction` → ., & Stein, C. (2001).        Introduction to algorithms second edition.
+- .venv/lib/python3.11/site-packages/networkx/generators/classic.py:2576 – `introduction` → ----------     .. [1] An introduction to data structures and algori
+- .venv/lib/python3.11/site-packages/networkx/generators/spectral_graph_forge.py:2950 – `introduction` → [2] M. Newman, "Networks: an introduction", Oxford university press,
+- .venv/lib/python3.11/site-packages/accelerate/accelerator.py:189095 – `model inference` → as not been prepared with big model inference with a device-map resembling
+- .venv/lib/python3.11/site-packages/huggingface_hub/templates/modelcard_template.md:4416 – `evaluation metrics` → # Metrics  <!-- These are the evaluation metrics being used, ideally with a de
+- .venv/lib/python3.11/site-packages/sympy/polys/galoistools.py:56724 – `introduction` → ==========      .. [1] 'An introduction to the Theory of Numbers' 5th
+- .venv/lib/python3.11/site-packages/sympy/polys/distributedmodules.py:1272 – `introduction` → is file is [SCA], "A Singular Introduction to Commutative Algebra". """
+- .venv/lib/python3.11/site-packages/sympy/polys/appellseqs.py:643 – `introduction` → nce .. [2] Peter Luschny, "An introduction to the Bernoulli function",
+- .venv/lib/python3.11/site-packages/sympy/polys/appellseqs.py:8139 – `introduction` → .. [1] Peter Luschny, "An introduction to the Bernoulli function",
+- .venv/lib/python3.11/site-packages/sympy/polys/matrices/domainmatrix.py:114122 – `introduction` → "Lattice Basis Reduction: An Introduction to the LLL Algorithm and Its
+- .venv/lib/python3.11/site-packages/sympy/ntheory/elliptic_curve.py:821 – `introduction` → [1] J. Silverman "A Friendly Introduction to Number Theory" Third Editi
+- .venv/lib/python3.11/site-packages/sympy/ntheory/elliptic_curve.py:968 – `introduction` → . [3] G. Hardy, E. Wright "An Introduction to the Theory of Numbers" Six
+- .venv/lib/python3.11/site-packages/sympy/ntheory/primetest.py:6024 – `introduction` → # see I. Niven et al. "An Introduction to Theory of Numbers", page 7
+- .venv/lib/python3.11/site-packages/sympy/printing/latex.py:100869 – `conclusion` → .premises)         if diagram.conclusions:             latex_result +=
+- .venv/lib/python3.11/site-packages/sympy/printing/latex.py:100984 – `conclusion` → self._print(diagram.conclusions)          return latex_resul
+- .venv/lib/python3.11/site-packages/sympy/printing/pretty/pretty.py:97875 – `conclusion` → .premises)         if diagram.conclusions:             results_arrow =
+- .venv/lib/python3.11/site-packages/sympy/printing/pretty/pretty.py:97957 – `conclusion` → ym("==>")              pretty_conclusions = self._print(diagram.conclu
+- .venv/lib/python3.11/site-packages/sympy/printing/pretty/pretty.py:97991 – `conclusion` → lusions = self._print(diagram.conclusions)[0]             pretty_resul
+- .venv/lib/python3.11/site-packages/sympy/printing/pretty/pretty.py:98094 – `conclusion` → results_arrow, pretty_conclusions)          return prettyForm(
+- .venv/lib/python3.11/site-packages/sympy/solvers/polysys.py:6704 – `introduction` → , Groebner Bases: A Short     Introduction for Systems Theorists, In: R.
+- .venv/lib/python3.11/site-packages/sympy/solvers/simplex.py:8517 – `introduction` → LINEAR PROGRAMMING: A Concise Introduction            web.tecnico.ulisbo
+- .venv/lib/python3.11/site-packages/sympy/solvers/ode/ode.py:12598 – `introduction` → l not be broken simply by the introduction of another matching hint.  If
+- .venv/lib/python3.11/site-packages/sympy/utilities/tests/test_wester.py:88548 – `introduction` → , _Differential Equations: An Introduction_, Addison-Wesley Publishing #
+- .venv/lib/python3.11/site-packages/sympy/plotting/tests/test_plot.py:2571 – `introduction` → # Examples from the 'introduction' notebook         ###
+- .venv/lib/python3.11/site-packages/sympy/combinatorics/coset_table.py:9482 – `introduction` → in coset table(i.e new coset introduction), then it is         appended
+- .venv/lib/python3.11/site-packages/sympy/combinatorics/permutations.py:20781 – `introduction` → >>> p.size     4      Short introduction to other methods     ========
+- .venv/lib/python3.11/site-packages/sympy/combinatorics/perm_groups.py:104215 – `introduction` → on Group Theory,             Introduction to Finite Group Theory: 1.4
+- .venv/lib/python3.11/site-packages/sympy/functions/special/zeta_functions.py:19550 – `introduction` → .. [2] Peter Luschny, "An introduction to the Bernoulli function",
+- .venv/lib/python3.11/site-packages/sympy/functions/combinatorial/numbers.py:18412 – `introduction` → .. [6] Peter Luschny, "An introduction to the Bernoulli function",
+- .venv/lib/python3.11/site-packages/sympy/functions/combinatorial/numbers.py:48583 – `introduction` → .. [3] Peter Luschny, "An introduction to the Bernoulli function",
+- .venv/lib/python3.11/site-packages/sympy/functions/combinatorial/numbers.py:53930 – `introduction` → .. [3] Peter Luschny, "An introduction to the Bernoulli function",
+- .venv/lib/python3.11/site-packages/sympy/tensor/tests/test_tensor.py:40660 – `introduction` → L. Brewin         # "A brief introduction to Cadabra" arxiv:0903.2085
+- .venv/lib/python3.11/site-packages/sympy/parsing/c/c_parser.py:1280 – `introduction` → ] https://clang.llvm.org/docs/IntroductionToTheClangAST.html  """  if ci
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:16461 – `conclusion` → and     another collection of conclusions.  ``premises`` and     ``con
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:16498 – `conclusion` → ions.  ``premises`` and     ``conclusions`` associate morphisms belong
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:16785 – `conclusion` → domain and     codomain of a conclusion morphism should be among the
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:17770 – `conclusion` → : "unique"})     >>> pprint(d.conclusions,use_unicode=False)     {g*f:
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:21551 – `conclusion` → is         interpreted as the conclusions of the diagram.  The type of
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:21749 – `conclusion` → d, the diagram         has no conclusions.          Examples         =
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:22309 – `conclusion` → * f: "unique"})         >>> d.conclusions[g * f]         {unique}
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:22388 – `conclusion` → premises = {}         conclusions = {}          # Here we will
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:23553 – `conclusion` → # We also have some conclusions.             conclusions_arg
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:23578 – `conclusion` → some conclusions.             conclusions_arg = args[1]              i
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:23631 – `conclusion` → 1]              if isinstance(conclusions_arg, list):
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:23835 – `conclusion` → for morphism in conclusions_arg:                     # C
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:23910 – `conclusion` → that no new objects appear in conclusions.                     if ((sy
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:24284 – `conclusion` → (                             conclusions, morphism, empty, add_identi
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:24418 – `conclusion` → )             elif isinstance(conclusions_arg, (dict, Dict)):
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:24595 – `conclusion` → for morphism, props in conclusions_arg.items():
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:24678 – `conclusion` → that no new objects appear in conclusions.                     if (mor
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:24999 – `conclusion` → (                             conclusions, morphism, FiniteSet(*props)
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:25214 – `conclusion` → w__(cls, Dict(premises), Dict(conclusions), objects)      @property
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:25930 – `conclusion` → rgs[0]      @property     def conclusions(self):         """         R
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:25981 – `conclusion` → """         Returns the conclusions of this diagram.          Ex
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:26597 – `conclusion` → * f: "unique"})         >>> d.conclusions[g * f] == FiniteSet("unique"
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:27465 – `conclusion` → of morphisms listed as conclusions.          Examples         =
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:28041 – `conclusion` → premises = EmptySet         conclusions = EmptySet          for morp
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:28256 – `conclusion` → for morphism in self.conclusions.keys():             if (morp
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:28360 – `conclusion` → domain == B):                 conclusions |= FiniteSet(morphism)
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:28422 – `conclusion` → m)          return (premises, conclusions)      def is_subdiagram(self
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:28619 – `conclusion` → `D` if all premises         (conclusions) of `D'` are contained in th
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:28679 – `conclusion` → ined in the premises         (conclusions) of `D`.  The morphisms cont
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:29510 – `conclusion` → return False          conclusions = all((m in self.conclusions
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:29539 – `conclusion` → conclusions = all((m in self.conclusions) and
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:29591 – `conclusion` → (diagram.conclusions[m] == self.conclusions[m])
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:29614 – `conclusion` → iagram.conclusions[m] == self.conclusions[m])
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:29673 – `conclusion` → for m in diagram.conclusions)          # Premises is sure
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:29746 – `conclusion` → ``True`` here.         return conclusions      def subdiagram_from_obj
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:30041 – `conclusion` → jects``, likewise         for conclusions.  Properties are preserved.
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:31031 – `conclusion` → orphism] = props          new_conclusions = {}         for morphism, p
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:31084 – `conclusion` → for morphism, props in self.conclusions.items():             if ((sy
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:31275 – `conclusion` → S.true)):                 new_conclusions[morphism] = props          r
+- .venv/lib/python3.11/site-packages/sympy/categories/baseclasses.py:31347 – `conclusion` → urn Diagram(new_premises, new_conclusions)
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:512 – `conclusion` → ed diagram.  The premises and conclusions of the diagram are then merg
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:3503 – `conclusion` → fter simplifying premises and conclusions and merging them (see above)
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:10665 – `conclusion` → ethod     def _merge_premises_conclusions(premises, conclusions):
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:10687 – `conclusion` → remises_conclusions(premises, conclusions):         """         Given
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:10939 – `conclusion` → premises         and also in conclusions, the properties in conclusio
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:10970 – `conclusion` → onclusions, the properties in conclusions take         priority.
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:11061 – `conclusion` → dict(chain(premises.items(), conclusions.items()))      @staticmethod
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:32045 – `conclusion` → sms,         # properties and conclusions are irrelevant.         top_
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:43140 – `conclusion` → sms(diagram.premises)         conclusions = DiagramGrid._simplify_morp
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:43194 – `conclusion` → d._simplify_morphisms(diagram.conclusions)         all_merged_morphism
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:43266 – `conclusion` → = DiagramGrid._merge_premises_conclusions(             premises, concl
+- .venv/lib/python3.11/site-packages/sympy/categories/diagram_drawing.py:43301 – `conclusion` → usions(             premises, conclusions)         merged_morphisms =
+- .venv/lib/python3.11/site-packages/sympy/categories/tests/test_baseclasses.py:3389 – `conclusion` → * f: "unique"})     assert d.conclusions == Dict({g * f: FiniteSet("u
+- .venv/lib/python3.11/site-packages/sympy/categories/tests/test_baseclasses.py:3493 – `conclusion` → s when there are premises and conclusions.     assert d.hom(A, C) == (
+- .venv/lib/python3.11/site-packages/sympy/categories/tests/test_baseclasses.py:3865 – `conclusion` → t("unique")      # Check that conclusion morphisms with new objects ar
+- .venv/lib/python3.11/site-packages/sympy/categories/tests/test_baseclasses.py:3959 – `conclusion` → iagram([f], [g])     assert d.conclusions == Dict({})      # Test an e
+- .venv/lib/python3.11/site-packages/sympy/categories/tests/test_baseclasses.py:4078 – `conclusion` → ises == Dict({})     assert d.conclusions == Dict({})     assert d.obj
+- .venv/lib/python3.11/site-packages/sympy/matrices/tests/test_eigen.py:15191 – `introduction` → xamples from Gilbert Strang, "Introduction to Linear Algebra"     # Posi
+- .venv/lib/python3.11/site-packages/pygments/lexers/objective.py:8533 – `introduction` → ual/ProgrammingWithObjectiveC/Introduction/Introduction.html'     aliase
+- .venv/lib/python3.11/site-packages/pygments/lexers/objective.py:8546 – `introduction` → ngWithObjectiveC/Introduction/Introduction.html'     aliases = ['objecti
+- .venv/lib/python3.11/site-packages/pygments/lexers/scripting.py:37214 – `introduction` → nceptual/AppleScriptLangGuide/introduction/ASLR_intro.html'     aliases
+- .venv/lib/python3.11/site-packages/pygments/lexers/minecraft.py:371 – `introduction` → ft/creator/documents/functionsintroduction     wiki: https://minecraft.w
+- .venv/lib/python3.11/site-packages/mpmath/matrices/eigen_symmetric.py:3007 – `introduction` → 12-226 (1971)      For a good introduction to Householder reflections, s
+- .venv/lib/python3.11/site-packages/mpmath/matrices/eigen_symmetric.py:3081 – `introduction` → also       Stoer, Bulirsch - Introduction to Numerical Analysis.     ""
+- .venv/lib/python3.11/site-packages/mpmath/matrices/eigen_symmetric.py:6956 – `introduction` → 12-226 (1971)      For a good introduction to Householder reflections, s
+- .venv/lib/python3.11/site-packages/mpmath/matrices/eigen_symmetric.py:7030 – `introduction` → also       Stoer, Bulirsch - Introduction to Numerical Analysis.     ""
+- .venv/lib/python3.11/site-packages/mpmath/matrices/eigen.py:8279 – `introduction` → nces:       Stoer, Bulirsch - Introduction to Numerical Analysis.
+- .venv/lib/python3.11/site-packages/mpmath/matrices/eigen.py:8496 – `introduction` → 398/399 in "Stoer, Bulirsch - Introduction to Numerical Analysis"     #
+- .venv/lib/python3.11/site-packages/opentelemetry/semconv/_incubating/attributes/aws_attributes.py:6039 – `introduction` → amazon.com/streams/latest/dev/introduction.html) the request refers to.
+- .venv/lib/python3.11/site-packages/IPython/core/usage.py:3276 – `introduction` → access help:    ?         -> Introduction and overview of IPython's fea
+- .venv/lib/python3.11/site-packages/torchvision/transforms/v2/functional/_geometry.py:20853 – `introduction` → lity.     # Indeed before the introduction of rotated bounding box forma
+- .venv/lib/python3.11/site-packages/datasets/builder.py:6370 – `introduction` → previously ignored before the introduction of config id because we didn'
+- .venv/lib/python3.11/site-packages/jedi/api/project.py:8500 – `conclusion` → # leads to the conclusion to by default prefer longer p
+- .venv/lib/python3.11/site-packages/jedi/inference/gradual/__init__.py:105 – `introduction` → in Jedi. If somebody needs an introduction, please let me know. """
+- .venv/lib/python3.11/site-packages/databricks/sdk/__init__.py:31070 – `data quality` → ityAPI:         """Manage the data quality of Unity Catalog objects (cur
+- .venv/lib/python3.11/site-packages/databricks/sdk/__init__.py:41324 – `data quality` → nitorV2API:         """Manage data quality of UC objects (currently supp
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/catalog.py:566854 – `data quality` → default dashboard summarizing data quality metrics.         :param slici
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/qualitymonitorv2.py:5523 – `data quality` → tyMonitorV2API:     """Manage data quality of UC objects (currently supp
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/ml.py:262628 – `model inference` → ature lookup during real-time model inference or     serve feature for real
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:2904 – `data quality` → lass CronSchedule:     """The data quality monitoring workflow cron sche
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:5040 – `data quality` → PauseStatus(Enum):     """The data quality monitoring workflow cron sche
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:7492 – `data quality` → default dashboard summarizing data quality metrics."""      slicing_expr
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:23416 – `data quality` → nitor:     """Monitor for the data quality of unity catalog entities suc
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:26388 – `data quality` → on:     """Destination of the data quality monitoring notification."""
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:27478 – `data quality` → sending notifications on the data quality monitoring."""      on_failur
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:28487 – `data quality` → formation on a refresh of the data quality monitoring pipeline."""
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:35167 – `data quality` → QualityAPI:     """Manage the data quality of Unity Catalog objects (cur
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:35445 – `data quality` → esponse:         """Cancels a data quality monitor refresh. Currently on
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:37508 – `data quality` → Monitor:         """Create a data quality monitor on a Unity Catalog ob
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:41189 – `data quality` → id: str):         """Delete a data quality monitor on Unity Catalog obje
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:44649 – `data quality` → -> Monitor:         """Read a data quality monitor on a Unity Catalog ob
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:46988 – `data quality` → t) -> Refresh:         """Get data quality monitor refresh. The call mus
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:49263 – `data quality` → """(Unimplemented) List data quality monitors.          :param pag
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:50271 – `data quality` → tor[Refresh]:         """List data quality monitor refreshes. The call m
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/dataquality.py:53053 – `data quality` → Monitor:         """Update a data quality monitor on Unity Catalog obje
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/pipelines.py:131460 – `data quality` → uster management, monitoring, data quality, and error handling.      Ins
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/pipelines.py:131732 – `data quality` → tep. You can     also enforce data quality with Delta Live Tables expect
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/pipelines.py:131828 – `data quality` → ow you to define expected     data quality and specify how to handle rec
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/compute.py:256959 – `introduction` → tps://maven.apache.org/guides/introduction/introduction-to-optional-and-
+- .venv/lib/python3.11/site-packages/databricks/sdk/service/compute.py:256972 – `introduction` → pache.org/guides/introduction/introduction-to-optional-and-excludes-depe
+- .venv/lib/python3.11/site-packages/sentry_sdk/scope.py:25895 – `introduction` → # XXX: note that with the introduction of the Scope.transaction gett
+- .venv/lib/python3.11/site-packages/mlflow/environment_variables.py:11496 – `model inference` → #: Specifies the timeout for model inference with input example(s) when lo
+- .venv/lib/python3.11/site-packages/mlflow/environment_variables.py:24284 – `model inference` → before timing out. #: If your model inference takes longer than this (e.g.,
+- .venv/lib/python3.11/site-packages/mlflow/dspy/autolog.py:1227 – `model inference` → s are only logged from normal model inference and             disabled when
+- .venv/lib/python3.11/site-packages/mlflow/dspy/autolog.py:1554 – `model inference` → s are only logged from normal model inference and disabled when
+- .venv/lib/python3.11/site-packages/mlflow/tracing/processor/base_mlflow.py:4810 – `model inference` → g routine might be applied to model inference worker threads         # in t
+- .venv/lib/python3.11/site-packages/mlflow/paddle/__init__.py:486 – `model inference` → ict()` is required for pyfunc model inference. """  import logging import o
+- .venv/lib/python3.11/site-packages/mlflow/paddle/__init__.py:3155 – `model inference` → ict()` is required for pyfunc model inference.      Args:         pd_model:
+- .venv/lib/python3.11/site-packages/mlflow/paddle/__init__.py:13173 – `model inference` → ict()` is required for pyfunc model inference.      Args:         pd_model:
+- .venv/lib/python3.11/site-packages/mlflow/utils/conda.py:8550 – `model inference` → be passed to the             model inference environment.      Returns:
+- .venv/lib/python3.11/site-packages/mlflow/models/python_api.py:6705 – `model inference` → o create an environment for MLmodel inference:              - "virtualenv"
+- .venv/lib/python3.11/site-packages/mlflow/models/python_api.py:7326 – `model inference` → pendencies to the             model inference environment. This is particul
+- .venv/lib/python3.11/site-packages/mlflow/models/python_api.py:8005 – `model inference` → be passed to the             model inference environment. This is useful f
+- .venv/lib/python3.11/site-packages/mlflow/models/model.py:3946 – `model inference` → le names that are used during model inference.\n"     "# They might need to
+- .venv/lib/python3.11/site-packages/mlflow/models/model.py:37733 – `model inference` → ronment variables used during model inference: "                     f"{env
+- .venv/lib/python3.11/site-packages/mlflow/models/model.py:52934 – `model inference` → ronment variables used during model inference: "                         f"
+- .venv/lib/python3.11/site-packages/mlflow/models/utils.py:16387 – `model inference` → mple that     can be used for model inference in the scoring server.      A
+- .venv/lib/python3.11/site-packages/mlflow/models/utils.py:52253 – `model inference` → owException(                 "Model inference is missing inputs. The model
+- .venv/lib/python3.11/site-packages/mlflow/models/evaluation/base.py:69799 – `model inference` → urrent Python environment for model inference, which               may diff
+- .venv/lib/python3.11/site-packages/mlflow/models/evaluation/base.py:30765 – `evaluation metrics` → stance containing             evaluation metrics and artifacts for the model.
+- .venv/lib/python3.11/site-packages/mlflow/models/evaluation/evaluators/shap.py:5232 – `model inference` → gument, this might break some model inference, so convert the argument into
+- .venv/lib/python3.11/site-packages/mlflow/sklearn/__init__.py:586 – `model inference` → ict()` is required for pyfunc model inference. """  import functools import
+- .venv/lib/python3.11/site-packages/mlflow/sklearn/__init__.py:6371 – `model inference` → ict()` is required for pyfunc model inference.      Args:         sk_model:
+- .venv/lib/python3.11/site-packages/mlflow/sklearn/__init__.py:13459 – `model inference` → ict()` is required for pyfunc model inference.      Args:         sk_model:
+- .venv/lib/python3.11/site-packages/mlflow/transformers/__init__.py:24887 – `model inference` → task type may cause incorrect model inference behavior. "             "Plea
+- .venv/lib/python3.11/site-packages/mlflow/evaluation/evaluation.py:4340 – `evaluation metrics` → etric] | None:         """The evaluation metrics."""         return self._metr
+- .venv/lib/python3.11/site-packages/mlflow/evaluation/evaluation.py:10577 – `evaluation metrics` → etric] | None:         """The evaluation metrics."""         return self._metr
+- .venv/lib/python3.11/site-packages/mlflow/evaluation/utils.py:1603 – `evaluation metrics` → ts, since it is not valid for evaluation metrics             metric_dict.pop("
+- .venv/lib/python3.11/site-packages/mlflow/tracking/fluent.py:128295 – `introduction` → MLflow     use only. With the introduction of MLFLOW_ACTIVE_MODEL_ID as
+- .venv/lib/python3.11/site-packages/mlflow/genai/optimize/optimize.py:1785 – `evaluation metrics` → ically optimize prompts using evaluation metrics and training data.     This f
+- .venv/lib/python3.11/site-packages/mlflow/genai/optimize/__init__.py:2906 – `evaluation metrics` → t using the given dataset and evaluation metrics.     This function has been r
+- .venv/lib/python3.11/site-packages/mlflow/spark/__init__.py:45788 – `model inference` → uses "prediction" as default model inference output column name.
+- .venv/lib/python3.11/site-packages/mlflow/pyfunc/_mlflow_pyfunc_backend_predict.py:745 – `model inference` → ncy '{missing_module}' to run model inference. When logging a model, MLflow
+- .venv/lib/python3.11/site-packages/mlflow/pyfunc/__init__.py:78197 – `model inference` → n environment             for model inference, the value can be either 'vir
+- .venv/lib/python3.11/site-packages/mlflow/pyfunc/__init__.py:86544 – `model inference` → n environment             for model inference. Note that environment is onl
+- .venv/lib/python3.11/site-packages/mlflow/pyfunc/__init__.py:87341 – `model inference` → urrent Python environment for model inference, which               may diff
+- .venv/lib/python3.11/site-packages/mlflow/pyfunc/__init__.py:116268 – `model inference` → ibrary version before running model inference."                     ) from
+- .venv/lib/python3.11/site-packages/mlflow/pyfunc/scoring_server/__init__.py:10523 – `model inference` → about an exception thrown by model inference code that is currently being
+- .venv/lib/python3.11/site-packages/click/core.py:78945 – `introduction` → ersionchanged:: 8.2.0         Introduction of ``deprecated``.      .. ve
+- .venv/lib/python3.11/site-packages/click/core.py:91661 – `introduction` → behavior as it was before the introduction of            the :attr:`UNSE
+- .venv/lib/python3.11/site-packages/torch/functional.py:79395 – `introduction` → ttps://mitpress.mit.edu/books/introduction-algorithms-third-edition
+- .venv/lib/python3.11/site-packages/torch/_appdirs.py:1833 – `introduction` → al/FileSystemProgrammingGuide/Introduction/Introduction.html # - XDG spe
+- .venv/lib/python3.11/site-packages/torch/_appdirs.py:1846 – `introduction` → ProgrammingGuide/Introduction/Introduction.html # - XDG spec for Un*x: h
+- .venv/lib/python3.11/site-packages/torch/nn/attention/flex_attention.py:3352 – `introduction` → ned pretty stable since their introduction. But       We do not consider
+- .venv/lib/python3.11/site-packages/torch/nn/parallel/distributed.py:14042 – `introduction` → .html>`__         for a brief introduction to all features related to di
+- .venv/lib/python3.11/site-packages/torch/fx/experimental/merge_matmul.py:1935 – `conclusion` → pth has been exhausted and no conclusion has been     # reached, assum
+- .venv/lib/python3.11/site-packages/torch/cuda/graphs.py:8058 – `introduction` → aph-semantics>` for a general introduction,     detailed use, and constr
+- .venv/lib/python3.11/site-packages/torch/utils/tensorboard/writer.py:43970 – `introduction` → org/docs/index.html#manual/en/introduction/Creating-a-scene for
+- .venv/lib/python3.11/site-packages/torch/ao/quantization/pt2e/prepare.py:6758 – `introduction` → https://www.geeksforgeeks.org/introduction-to-disjoint-set-data-structur
+- .venv/lib/python3.11/site-packages/torch/distributions/wishart.py:2602 – `introduction` → 3] Anderson, T. W., 2003. `An Introduction to Multivariate Statistical A
+- .venv/lib/python3.11/site-packages/sqlalchemy/testing/profiling.py:7620 – `introduction` → ough,     # likely due to the introduction of __signature__.      from s
+- .venv/lib/python3.11/site-packages/sqlalchemy/orm/util.py:17025 – `introduction` → layer of formality as to the introduction of new ORMAdapter use cases (
+- .venv/lib/python3.11/site-packages/sqlalchemy/orm/_orm_constructors.py:42585 – `introduction` → m_related_objects` - tutorial introduction         to :func:`_orm.relati
+- .venv/lib/python3.11/site-packages/sqlalchemy/orm/_orm_constructors.py:52345 – `introduction` → ading_toplevel` - includes an introduction to subquery         eager loa
+- .venv/lib/python3.11/site-packages/sqlalchemy/orm/_orm_constructors.py:71038 – `introduction` → :ref:`dynamic_relationship` - Introduction to "dynamic"         relation
+- .venv/lib/python3.11/site-packages/sqlalchemy/orm/_orm_constructors.py:74074 – `introduction` → :`relationships_one_to_one` - Introduction to the "one to           one"
+- .venv/lib/python3.11/site-packages/sqlalchemy/sql/dml.py:42699 – `introduction` → ial_multiple_parameters` - an introduction to                the traditi
+- .venv/lib/python3.11/site-packages/sqlalchemy/sql/schema.py:10795 – `introduction` → :ref:`metadata_describing` - Introduction to database metadata      """
+- .venv/lib/python3.11/site-packages/sqlalchemy/sql/schema.py:200199 – `introduction` → :ref:`metadata_describing` - Introduction to database metadata      """
+- .venv/lib/python3.11/site-packages/numpy/linalg/_linalg.py:94252 – `introduction` → --------      .. [1] Cormen, "Introduction to Algorithms", Chapter 15.2,
+- .venv/lib/python3.11/site-packages/numpy/linalg/_linalg.py:97555 – `introduction` → tion CLOSELY follows Cormen, "Introduction to Algorithms",     Chapter 1
+- .venv/lib/python3.11/site-packages/numpy/typing/__init__.py:3546 – `introduction` → .generic` instance. Until the introduction of shape typing (see :pep:`64
+- .venv/lib/python3.11/site-packages/numpy/fft/__init__.py:2192 – `introduction` → . [NR]_ provide an accessible introduction to Fourier analysis and its a
+- .venv/lib/python3.11/site-packages/numpy/fft/_pocketfft.py:9782 – `introduction` → --------     numpy.fft : An introduction, with definitions and general
+- .venv/lib/python3.11/site-packages/tornado/auth.py:44142 – `introduction` → eyword arguments.          An introduction to the Facebook Graph API can
+- .venv/lib/python3.11/site-packages/tornado/iostream.py:55211 – `introduction` → se             # Prior to the introduction of SNI, this is where we woul
+- .venv/lib/python3.11/site-packages/tornado/platform/asyncio.py:19725 – `introduction` → s would require the         # introduction of a new hook: https://bugs.p
+- .venv/lib/python3.11/site-packages/sklearn/naive_bayes.py:30958 – `introduction` → havan and H. Schuetze (2008). Introduction to     Information Retrieval.
+- .venv/lib/python3.11/site-packages/sklearn/naive_bayes.py:41071 – `introduction` → havan and H. Schuetze (2008). Introduction to     Information Retrieval.
+- .venv/lib/python3.11/site-packages/sklearn/metrics/_ranking.py:23534 – `introduction` → . [4] `Fawcett, T. (2006). An introduction to ROC analysis. Pattern
+- .venv/lib/python3.11/site-packages/sklearn/metrics/_ranking.py:44422 – `introduction` → >`_      .. [2] Fawcett T. An introduction to ROC analysis[J]. Pattern R
+- .venv/lib/python3.11/site-packages/sklearn/metrics/cluster/__init__.py:3 – `evaluation metrics` → """Evaluation metrics for cluster analysis results.
+- .venv/lib/python3.11/site-packages/sklearn/metrics/cluster/_unsupervised.py:16 – `evaluation metrics` → """Unsupervised evaluation metrics."""  # Authors: The scikit-le
+- .venv/lib/python3.11/site-packages/sklearn/ensemble/tests/test_gradient_boosting.py:3723 – `conclusion` → est run faster,     # but the conclusions are still the same, despite
+- .venv/lib/python3.11/site-packages/sklearn/cluster/_kmeans.py:7286 – `conclusion` → other than mentioning in the conclusion         # that it helped.
+- .venv/lib/python3.11/site-packages/sklearn/feature_extraction/text.py:57322 – `introduction` → e  (2008).                    Introduction to Information Retrieval. Cam
+- .venv/lib/python3.11/site-packages/sklearn/datasets/_twenty_newsgroups.py:211 – `introduction` → ie/20Newsgroups/  Quoting the introduction:      The 20 Newsgroups data
+- .venv/lib/python3.11/site-packages/sklearn/tests/test_naive_bayes.py:20121 – `introduction` → ghavan, and     # Schuetze's "Introduction to Information Retrieval" boo
+- .venv/lib/python3.11/site-packages/sklearn/tests/test_naive_bayes.py:21867 – `introduction` → ghavan,     # and Schuetze's "Introduction to Information Retrieval" boo
+- .venv/lib/python3.11/site-packages/sklearn/tests/test_naive_bayes.py:22641 – `introduction` → # Raghavan, and Schuetze's "Introduction to Information Retrieval" boo
+- .venv/lib/python3.11/site-packages/transformers/modeling_utils.py:224282 – `model inference` → > Parameters for big model inference              dtype (`str` or
+- .venv/lib/python3.11/site-packages/transformers/trainer.py:155657 – `evaluation metrics` → f"which is not found in the evaluation metrics. "                     f"The
+- .venv/lib/python3.11/site-packages/transformers/trainer.py:155715 – `evaluation metrics` → f"The available evaluation metrics are: {list(metrics.keys())}.
+- .venv/lib/python3.11/site-packages/transformers/trainer.py:159999 – `evaluation metrics` → should be saved based on the evaluation metrics.          Returns:
+- .venv/lib/python3.11/site-packages/transformers/trainer.py:160653 – `evaluation metrics` → }', which is not found in the evaluation metrics. "                     f"The
+- .venv/lib/python3.11/site-packages/transformers/trainer.py:160711 – `evaluation metrics` → f"The available evaluation metrics are: {list(metrics.keys())}.
+- .venv/lib/python3.11/site-packages/transformers/pipelines/base.py:36599 – `model inference` → Input -> Tokenization -> Model Inference -> Post-Processing (task depe
+- .venv/lib/python3.11/site-packages/transformers/utils/auto_docstring.py:80050 – `introduction` → ptional*):             Custom introduction text to add to the docstring.
+- .venv/lib/python3.11/site-packages/transformers/utils/auto_docstring.py:80131 – `introduction` → laces the default             introduction text generated by the decorat
+- .venv/lib/python3.11/site-packages/transformers/utils/doc.py:3202 – `introduction` → cstring_decorator   PT_RETURN_INTRODUCTION = r"""     Returns:         [
+- .venv/lib/python3.11/site-packages/transformers/utils/doc.py:3551 – `introduction` → and inputs.  """   TF_RETURN_INTRODUCTION = r"""     Returns:         [
+- .venv/lib/python3.11/site-packages/transformers/utils/doc.py:6049 – `introduction` → )      # Add the return introduction     if add_intro:         ful
+- .venv/lib/python3.11/site-packages/transformers/utils/doc.py:6184 – `introduction` → _}"         intro = TF_RETURN_INTRODUCTION if output_type.__name__.start
+- .venv/lib/python3.11/site-packages/transformers/utils/doc.py:6253 – `introduction` → artswith("TF") else PT_RETURN_INTRODUCTION         intro = intro.format(
+- .venv/lib/python3.11/site-packages/transformers/utils/fx.py:27984 – `model inference` → """Generates dummy input for model inference recording."""         # Retri
+- .venv/lib/python3.11/site-packages/transformers/models/musicgen/modeling_musicgen.py:94628 – `model inference` → atibility with Accelerate big model inference: we need the encoder to outpu
+- .venv/lib/python3.11/site-packages/transformers/models/musicgen/modeling_musicgen.py:97017 – `model inference` → atibility with Accelerate big model inference: we need the encoder to outpu
+- .venv/lib/python3.11/site-packages/transformers/models/musicgen_melody/modeling_musicgen_melody.py:90328 – `model inference` → atibility with Accelerate big model inference: we need the encoder to outpu
+- .venv/lib/python3.11/site-packages/transformers/generation/utils.py:45474 – `model inference` → atibility with Accelerate big model inference: we need the encoder to outpu
+- .venv/lib/python3.11/site-packages/torchaudio/datasets/speechcommands.py:3357 – `introduction` → ataset             and in the introduction of Section 7 of the original
+- .venv/lib/python3.11/site-packages/matplotlib/colorizer.py:17674 – `introduction` → # code written before the introduction of the Colorizer     # and Co
+- .venv/lib/python3.11/site-packages/scipy/odr/__init__.py:1033 – `introduction` → nformation =================  Introduction ------------  Why Orthogonal
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_ip.py:44469 – `introduction` → Dimitris, and J. Tsitsiklis. "Introduction to linear            programm
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_rs.py:388 – `introduction` → Dimitris, and J. Tsitsiklis. "Introduction to linear            programm
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_simplex.py:960 – `introduction` → and Lieberman, G.J. (1995), "Introduction to        Mathematical Progra
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_simplex.py:13938 – `introduction` → the basis.         # Ref: "An Introduction to Linear Programming and Gam
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_simplex.py:20519 – `introduction` → and Lieberman, G.J. (1995), "Introduction to            Mathematical Pr
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_doc.py:47178 – `introduction` → Dimitris, and J. Tsitsiklis. "Introduction to linear            programm
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_doc.py:55144 – `introduction` → Dimitris, and J. Tsitsiklis. "Introduction to linear            programm
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_doc.py:61688 – `introduction` → and Lieberman, G.J. (1995), "Introduction to            Mathematical Pr
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog.py:21290 – `introduction` → and Lieberman, G.J. (1995), "Introduction to            Mathematical Pr
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog.py:22712 – `introduction` → Dimitris, and J. Tsitsiklis. "Introduction to linear            programm
+- .venv/lib/python3.11/site-packages/scipy/optimize/_linprog_util.py:48264 – `introduction` → Dimitris, and J. Tsitsiklis. "Introduction to linear            programm
+- .venv/lib/python3.11/site-packages/scipy/optimize/_lsq/trf.py:2329 – `introduction` → elow and read the code).  The introduction of the matrix D doesn't allow
+- .venv/lib/python3.11/site-packages/scipy/integrate/_tanhsinh.py:14402 – `introduction` → to a compatible form with the introduction of     additional parameters,
+- .venv/lib/python3.11/site-packages/scipy/constants/_codata.py:1044 – `introduction` → ATA set. Also available is an introduction to the constants for non-expe
+- .venv/lib/python3.11/site-packages/scipy/constants/_codata.py:1133 – `introduction` → hysics.nist.gov/cuu/Constants/introduction.html  References ---------- T
+- .venv/lib/python3.11/site-packages/scipy/io/_netcdf.py:4346 – `introduction` → a.ucar.edu/nug/current/netcdf_introduction.html#select_format>`__
+- .venv/lib/python3.11/site-packages/scipy/_lib/pyprima/cobyla/cobyla.py:3707 – `introduction` → rete example.      A detailed introduction to the arguments is as follow
+- .venv/lib/python3.11/site-packages/scipy/differentiate/_differentiate.py:15980 – `introduction` → to a compatible form with the introduction of     additional parameters,
+- .venv/lib/python3.11/site-packages/scipy/spatial/distance.py:26263 – `introduction` → Groups in Data:            An Introduction to Cluster Analysis."  John W
+- .venv/lib/python3.11/site-packages/scipy/signal/_filter_design.py:25824 – `introduction` → Group Delay",            in "Introduction to Digital Filters with Audio
+- .venv/lib/python3.11/site-packages/scipy/signal/_filter_design.py:162149 – `introduction` → om/EllipticFunctions/JacobiSC/introductions/JacobiPQs/ShowAll.html,
+- .venv/lib/python3.11/site-packages/scipy/signal/_filter_design.py:175257 – `introduction` → [1] Sophocles J. Orfanidis, "Introduction To Signal Processing",
+- .venv/lib/python3.11/site-packages/scipy/signal/_filter_design.py:177745 – `introduction` → [1] Sophocles J. Orfanidis, "Introduction To Signal Processing",
+- .venv/lib/python3.11/site-packages/scipy/signal/_filter_design.py:183836 – `introduction` → [1] Sophocles J. Orfanidis, "Introduction To Signal Processing",
+- .venv/lib/python3.11/site-packages/scipy/signal/windows/_windows.py:46675 – `introduction` → ina, and Richard E. Goldberg. Introduction to Digital            Audio C
+- .venv/lib/python3.11/site-packages/scipy/stats/_stats_py.py:134659 – `introduction` → ics: An            integrated introduction for psychology", Houghton, Mi
+- .venv/lib/python3.11/site-packages/scipy/stats/_stats_py.py:364577 – `introduction` → ed.     A brief and intuitive introduction can be found at [2]_.      ..
+- .venv/lib/python3.11/site-packages/scipy/stats/_stats_py.py:373537 – `introduction` → ed.     A brief and intuitive introduction can be found at [2]_.      ..
+- .venv/lib/python3.11/site-packages/scipy/stats/_relative_risk.py:6800 – `introduction` → -     .. [1] Alan Agresti, An Introduction to Categorical Data Analysis
+- .venv/lib/python3.11/site-packages/scipy/stats/_odds_ratio.py:9190 – `introduction` → .. [3] Alan Agresti, An Introduction to Categorical Data Analysis
+- .venv/lib/python3.11/site-packages/scipy/stats/_resampling.py:17653 – `introduction` → fron and R. J. Tibshirani, An Introduction to the Bootstrap,        Chap
+- .venv/lib/python3.11/site-packages/scipy/stats/_resampling.py:82384 – `introduction` → fron and R. J. Tibshirani. An Introduction to the Bootstrap        (1993
+- .venv/lib/python3.11/site-packages/scipy/stats/qmc.py:623 – `introduction` → update_discrepancy    scale   Introduction to Quasi-Monte Carlo ========
+- .venv/lib/python3.11/site-packages/scipy/stats/_morestats.py:141930 – `introduction` → -----     .. [1] Mood, A. M., Introduction to the Theory of Statistics.
+- .venv/lib/python3.11/site-packages/scipy/stats/_morestats.py:170443 – `conclusion` → al     study as it led to the conclusion that the new treatment had a
+- .venv/lib/python3.11/site-packages/scipy/stats/tests/test_mstats_extras.py:5243 – `introduction` → # jacknnife standard error, Introduction to the Bootstrap Eq. 11.5
+- .venv/lib/python3.11/site-packages/openai/resources/beta/realtime/realtime.py:23487 – `model inference` → hich means triggering         model inference. When in Server VAD mode, the
+- .venv/lib/python3.11/site-packages/openai/resources/beta/realtime/realtime.py:34280 – `model inference` → hich means triggering         model inference. When in Server VAD mode, the
+- .venv/lib/python3.11/site-packages/openai/resources/realtime/realtime.py:23802 – `model inference` → hich means triggering         model inference. When in Server VAD mode, the
+- .venv/lib/python3.11/site-packages/openai/resources/realtime/realtime.py:35024 – `model inference` → hich means triggering         model inference. When in Server VAD mode, the
+- .venv/lib/python3.11/site-packages/wandb/integration/xgboost/xgboost.py:1938 – `evaluation metrics` → to Weights & Biases     - log evaluation metrics collected by XGBoost, such as
+- .venv/lib/python3.11/site-packages/wandb/integration/lightgbm/__init__.py:5543 – `evaluation metrics` → config (default).       - log evaluation metrics collected by LightGBM, such a
+- .venv/lib/python3.11/site-packages/wandb/sdk/wandb_init.py:123 – `training pipeline` → inning of a new run. In an ML training pipeline, you could add `wandb.init()`
+- .venv/lib/python3.11/site-packages/wandb/sdk/wandb_init.py:45179 – `training pipeline` → and log to W&B.      In an ML training pipeline, you could add `wandb.init()`
+- .venv/lib/python3.11/site-packages/wandb/sdk/wandb_summary.py:2599 – `evaluation metrics` → mpleted, you may want to save evaluation metrics to a     run. Summary can han
+- .venv/lib/python3.11/site-packages/wandb/vendor/pygments/lexers/webmisc.py:33465 – `introduction` → .qt.digia.com/4.7/qdeclarativeintroduction.html.      .. versionadded::
+- scripts/rank_data_quality.py:9 – `data quality` → """ Rank data quality using LLM-as-a-judge.  This s
+- scripts/rank_data_quality.py:973 – `data quality` → PROMPT = """You are an expert data quality auditor. You will be given a
+- scripts/rank_data_quality.py:4131 – `data quality` → otal=len(rows), desc="Ranking Data Quality", unit="sample")      if dry_
+- scripts/rank_data_quality.py:6869 – `data quality` → umentParser(description="Rank data quality using LLM.")     parser.add_a
+- scripts/scan_repo.py:114 – `introduction` → to look for KEYWORDS = [     "introduction",     "data quality",     "di
+- scripts/scan_repo.py:134 – `data quality` → = [     "introduction",     "data quality",     "distillation process",
+- scripts/scan_repo.py:154 – `distillation process` → on",     "data quality",     "distillation process",     "model inference",
+- scripts/scan_repo.py:182 – `model inference` → "distillation process",     "model inference",     "training pipeline",
+- scripts/scan_repo.py:205 – `training pipeline` → ,     "model inference",     "training pipeline",     "evaluation metrics",
+- scripts/scan_repo.py:230 – `evaluation metrics` → "training pipeline",     "evaluation metrics",     "conclusion", ]  # File
+- scripts/scan_repo.py:256 – `conclusion` → "evaluation metrics",     "conclusion", ]  # File extensions to sca
+- scripts/cli.py:2180 – `training pipeline` → "), ) -> None:     """Run the training pipeline with optional evaluation."""
+- scripts/python/data_processing/post_process_distillation.py:1174 – `conclusion` → NARRATIVE_FLUFF = [     "in conclusion", "overall", "this highlights
+- data/nexa_teacher_hypothesis.txt:1048 – `conclusion` → ust not repeat known facts as conclusions. It must propose a testable
+- data/processed/README.md:448 – `training pipeline` → ├── training/              # Training pipeline outputs │   ├── train/
+- data/processed/README.md:731 – `evaluation metrics` → │   ├── metrics/           # Evaluation metrics │   └── reports/           #
+- nexa_ui/eval_dashboard.py:23698 – `data quality` → st.markdown("#### ⚠️ Data Quality Notes")         st.info(
