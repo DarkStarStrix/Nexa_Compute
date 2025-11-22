@@ -16,10 +16,10 @@ from nexa_data.schemas import (
     ToolCall,
     ToolName,
     ToolResult,
+    ToolResultMeta,
     TOOLCALL_JSON_SCHEMA,
 )
 from nexa_tools import PaperFetcher, PaperSearcher, SandboxRunner, UnitConverter
-from nexa_tools.toolresult_schema import ToolResultMeta
 
 LOGGER = logging.getLogger(__name__)
 

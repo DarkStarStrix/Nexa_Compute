@@ -22,3 +22,5 @@ datasets>=2.14.0
 accelerate>=0.25.0
 nvidia-ml-py>=12.535
 openai>=1.0.0
+pydantic-settings>=2.0.0
+sqlalchemy>=2.0.0

@@ -5,7 +5,10 @@ from __future__ import annotations
 import time
 from typing import Iterable
 
-import pynvml
+try:
+    import pynvml
+except ImportError:
+    pynvml = None
 
 
 def stream_gpu_stats(interval: float = 5.0, devices: Iterable[int] | None = None) -> None:
@@ -15,6 +18,9 @@ def stream_gpu_stats(interval: float = 5.0, devices: Iterable[int] | None = None
         interval: Seconds to sleep between samples.
         devices: Optional iterable of device indices. Defaults to all GPUs.
     """
+    if pynvml is None:
+        print("GPU monitoring unavailable: pynvml not installed.")
+        return
 
     pynvml.nvmlInit()
     try:
