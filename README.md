@@ -4,7 +4,7 @@
 
 A complete AI foundry platform for orchestrating data generation, model distillation, training, and evaluation on ephemeral GPU compute.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Local Development
 
@@ -23,13 +23,7 @@ cd docs/mintlify && npx mintlify dev
 python scripts/create_dashboard_demo.py
 ```
 
-### Access Points
-
-- **Frontend Dashboard**: <http://localhost:3000>
-- **Backend API**: <http://localhost:8000/docs>
-- **Documentation**: <http://localhost:3001>
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 Nexa_compute/
@@ -54,7 +48,7 @@ Nexa_compute/
 └── scripts/                      # Utility scripts
 ```
 
-## 🎯 Core Features
+## Core Features
 
 ### Backend (FastAPI)
 
@@ -99,7 +93,7 @@ Nexa_compute/
 | **SLA** | None | 99.9% |
 | **Price** | $0 | $99/mo + usage |
 
-## 📦 Python SDK Usage
+## Python SDK Usage
 
 ```python
 from nexa_forge import NexaForgeClient
@@ -122,7 +116,7 @@ status = client.get_job(job1['job_id'])
 all_jobs = client.list_jobs(limit=10)
 ```
 
-## 🔐 Security
+## Security
 
 - API keys hashed with SHA256
 - One-time key display on creation
@@ -130,7 +124,7 @@ all_jobs = client.list_jobs(limit=10)
 - Revocation support
 - Ready for rate limiting
 
-## 📊 Tech Stack
+## Tech Stack
 
 - **Backend**: FastAPI, SQLAlchemy, SQLite
 - **Frontend**: Next.js 16, Tailwind CSS, Recharts
@@ -138,7 +132,7 @@ all_jobs = client.list_jobs(limit=10)
 - **Docs**: Mintlify
 - **Deployment**: Docker Compose ready
 
-## 🚢 Deployment
+## Deployment
 
 ### Docker Compose
 
@@ -153,7 +147,7 @@ all_jobs = client.list_jobs(limit=10)
 - Docs → Mintlify
 - Database → PostgreSQL
 
-## 📚 Documentation
+## Documentation
 
 Full documentation available at <http://localhost:3001>
 
@@ -165,19 +159,9 @@ Key sections:
 - **SDK Guide**: Python client usage
 - **Pricing**: Freemium model details
 
-## 🤝 Contributing
+## Contributing
 
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## 🆘 Support
-
-- **Documentation**: <http://localhost:3001>
-- **GitHub Issues**: <https://github.com/nexaai/nexa-compute/issues>
-- **Email**: <support@nexa.ai>
 
 ---
 
