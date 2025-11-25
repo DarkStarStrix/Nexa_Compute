@@ -1,7 +1,0 @@
-[
-  {"id": "deepseek/deepseek-chat-v3.1", "type": "openrouter", "parameters": {"max_workers": 16, "max_tokens": 2048}},
-  {"id": "google/gemini-2.5-flash", "type": "openrouter", "parameters": {"max_workers": 16, "max_tokens": 2048}},
-  {"id": "qwen/qwen3-32b", "type": "openrouter", "parameters": {"max_workers": 12, "max_tokens": 1024}},
-  {"id": "openai/gpt-5-mini", "type": "openrouter", "parameters": {"max_workers": 16, "max_tokens": 4096}}
-]
-
