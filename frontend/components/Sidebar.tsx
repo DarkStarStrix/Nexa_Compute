@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, List, Server, Database, CreditCard, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, List, Server, Database, CreditCard, FileText, Settings, DollarSign } from "lucide-react";
 import clsx from "clsx";
 
 const navigation = [
@@ -11,6 +11,7 @@ const navigation = [
     { name: "Workers", href: "/dashboard/workers", icon: Server },
     { name: "Artifacts", href: "/dashboard/artifacts", icon: Database },
     { name: "Billing", href: "/dashboard/billing", icon: CreditCard },
+    { name: "Pricing", href: "/dashboard/pricing", icon: DollarSign },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

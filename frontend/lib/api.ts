@@ -11,6 +11,7 @@ export interface Job {
     worker_id?: string;
     result?: any;
     error?: string;
+    logs?: string;
 }
 
 export interface Worker {
@@ -21,6 +22,16 @@ export interface Worker {
     gpu_count: number;
     last_heartbeat: string;
     current_job_id?: string;
+}
+
+export interface Artifact {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    size_human: string;
+    uri: string;
+    created: string;
 }
 
 export async function getJobs(skip = 0, limit = 100, status?: string): Promise<Job[]> {
@@ -45,6 +56,21 @@ export async function submitJob(type: string, payload: any): Promise<Job> {
         body: JSON.stringify({ payload }),
     });
     if (!res.ok) throw new Error('Failed to submit job');
+    return res.json();
+}
+
+export async function getArtifacts(artifactType?: string, limit = 100, skip = 0): Promise<Artifact[]> {
+    const params = new URLSearchParams({ limit: limit.toString(), skip: skip.toString() });
+    if (artifactType) params.append('artifact_type', artifactType);
+
+    const res = await fetch(`${API_URL}/api/artifacts?${params}`);
+    if (!res.ok) throw new Error('Failed to fetch artifacts');
+    return res.json();
+}
+
+export async function getArtifact(artifactId: string): Promise<Artifact> {
+    const res = await fetch(`${API_URL}/api/artifacts/${artifactId}`);
+    if (!res.ok) throw new Error('Failed to fetch artifact');
     return res.json();
 }
 

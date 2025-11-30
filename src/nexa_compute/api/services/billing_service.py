@@ -6,12 +6,35 @@ from sqlalchemy import func
 from nexa_compute.api.models import BillingResourceType, BillingSummary
 from nexa_compute.api.database import BillingRecordDB
 
-# Mock rates
+# Pricing Model (Pay-as-you-go)
+# Base costs: $6/month VPS, $2/hour compute
+# Target: $3/hour GPU (covers $2 cost + $1 profit margin)
+# Additional services priced to cover API costs + small margin
+
 RATES = {
-    BillingResourceType.GPU_HOUR: 2.50,  # $2.50/hr for A100
-    BillingResourceType.TOKEN_INPUT: 0.00001, # $10/1M tokens
-    BillingResourceType.TOKEN_OUTPUT: 0.00003, # $30/1M tokens
-    BillingResourceType.STORAGE_GB_MONTH: 0.02 # $0.02/GB/month
+    # GPU Compute: $3/hour (covers $2 compute cost + $1 profit)
+    BillingResourceType.GPU_HOUR: 3.00,
+    
+    # Training: $3/hour per GPU (same as GPU_HOUR, but tracked separately)
+    # Fine-tuning: $3/hour per GPU
+    # Inference: $1/hour per GPU (lower overhead, shared resources)
+    
+    # Token-based pricing (for API calls)
+    BillingResourceType.TOKEN_INPUT: 0.00001,  # $10/1M tokens
+    BillingResourceType.TOKEN_OUTPUT: 0.00003,  # $30/1M tokens
+    
+    # Storage: $0.05/GB/month (covers S3/Wasabi costs + margin)
+    BillingResourceType.STORAGE_GB_MONTH: 0.05
+}
+
+# Job type multipliers (some jobs use more resources)
+JOB_TYPE_MULTIPLIERS = {
+    "train": 1.0,      # Full GPU hour rate
+    "distill": 0.8,    # Slightly less intensive
+    "evaluate": 0.6,   # Evaluation is lighter
+    "generate": 0.5,   # Data generation is CPU-bound
+    "audit": 0.3,      # Audit is mostly I/O
+    "deploy": 0.0,     # Deployment is one-time, no ongoing cost
 }
 
 class BillingService:
@@ -23,9 +46,16 @@ class BillingService:
         user_id: str, 
         resource_type: BillingResourceType, 
         quantity: float, 
-        job_id: Optional[str] = None
+        job_id: Optional[str] = None,
+        job_type: Optional[str] = None
     ) -> BillingRecordDB:
         unit_price = RATES.get(resource_type, 0.0)
+        
+        # Apply job type multiplier for GPU hours
+        if resource_type == BillingResourceType.GPU_HOUR and job_type:
+            multiplier = JOB_TYPE_MULTIPLIERS.get(job_type, 1.0)
+            unit_price *= multiplier
+        
         total_cost = quantity * unit_price
         
         record = BillingRecordDB(
@@ -43,6 +73,25 @@ class BillingService:
         self.db.commit()
         self.db.refresh(record)
         return record
+
+    def record_job_completion(
+        self,
+        user_id: str,
+        job_id: str,
+        job_type: str,
+        gpu_hours: float,
+        gpu_count: int = 1
+    ) -> BillingRecordDB:
+        """Record billing for a completed job."""
+        # GPU hours are billed per GPU
+        total_gpu_hours = gpu_hours * gpu_count
+        return self.record_usage(
+            user_id=user_id,
+            resource_type=BillingResourceType.GPU_HOUR,
+            quantity=total_gpu_hours,
+            job_id=job_id,
+            job_type=job_type
+        )
 
     def get_summary(
         self, 
@@ -80,46 +129,3 @@ class BillingService:
             usage_by_type=usage_by_type,
             cost_by_type=cost_by_type
         )
-        
-    def generate_mock_data(self, user_id: str):
-        """Generate some mock billing data for demonstration."""
-        # Check if we already have data
-        if self.db.query(BillingRecordDB).filter(BillingRecordDB.user_id == user_id).first():
-            return
-
-        # Generate last 30 days of data
-        base_time = datetime.utcnow() - timedelta(days=30)
-        
-        import random
-        
-        for i in range(30):
-            day = base_time + timedelta(days=i)
-            
-            # Random GPU usage
-            if random.random() > 0.3:
-                self.record_usage(
-                    user_id=user_id,
-                    resource_type=BillingResourceType.GPU_HOUR,
-                    quantity=random.uniform(0.5, 8.0),
-                    job_id=f"job_mock_{i}"
-                ).timestamp = day # Hack to set past date
-                
-            # Random Token usage
-            if random.random() > 0.2:
-                self.record_usage(
-                    user_id=user_id,
-                    resource_type=BillingResourceType.TOKEN_INPUT,
-                    quantity=random.randint(1000, 100000),
-                    job_id=f"job_mock_{i}"
-                ).timestamp = day
-                
-                self.record_usage(
-                    user_id=user_id,
-                    resource_type=BillingResourceType.TOKEN_OUTPUT,
-                    quantity=random.randint(500, 50000),
-                    job_id=f"job_mock_{i}"
-                ).timestamp = day
-        
-        # Fix timestamps (since record_usage sets to utcnow)
-        # This is just for the mock generator, in real app we wouldn't do this
-        pass

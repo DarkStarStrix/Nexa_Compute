@@ -1,168 +1,140 @@
 # Nexa Compute & Nexa Forge
 
-> **AI Infrastructure Platform with Managed API Service**
+**AI Infrastructure Platform with Managed API Service**
+
+[![Tests](https://img.shields.io/badge/tests-74%20passing-brightgreen)](tests/)
+[![Linting](https://img.shields.io/badge/linting-ruff%20%2B%20mypy-blue)](https://github.com/astral-sh/ruff)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.3.0-lightgrey)](pyproject.toml)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Dependencies](https://img.shields.io/badge/dependencies-uv-purple)](https://github.com/astral-sh/uv)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg?style=flat&logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com)
+[![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=flat&logo=PyTorch&logoColor=white)](https://pytorch.org/)
 
 A complete AI foundry platform for orchestrating data generation, model distillation, training, and evaluation on ephemeral GPU compute.
 
+---
+
 ## Quick Start
 
-### Local Development
+### 1. Setup Environment
+
+We use [uv](https://github.com/astral-sh/uv) for dependency management. The repo is configured to work with the Homebrew install at `/opt/homebrew/bin/uv`.
 
 ```bash
-# 1. Start Backend API
-export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-uvicorn nexa_compute.api.main:app --port 8000
+# optional: create a project virtualenv
+/opt/homebrew/bin/uv venv .venv
+source .venv/bin/activate
 
-# 2. Start Frontend Dashboard (new terminal)
-cd frontend && npm run dev
+# install all runtime + dev dependencies deterministically
+/opt/homebrew/bin/uv pip sync requirements/requirements-dev.lock
 
-# 3. Start Mintlify Docs (new terminal)
-cd docs/mintlify && npx mintlify dev
-
-# 4. Populate Demo Data
-python scripts/create_dashboard_demo.py
+# install git hooks
+pre-commit install
 ```
+
+### 2. Training Workflow
+
+**Prerequisites:**
+You must bring your own compute from your preferred vendor (AWS, GCP, Lambda, Prime Intellect, etc.).
+1.  Spin up a GPU instance (Ubuntu 22.04 recommended).
+2.  Copy `.env.example` to `.env` and configure your services (WandB, HuggingFace, S3).
+
+**Deploy a Training Node:**
+SSH into your node and run the turn-key deployment script. This will sync your code, install dependencies, and set up a persistent workspace.
+```bash
+./nexa_infra/scripts/provision/deploy.sh ubuntu@gpu-node-ip
+```
+
+**Start Training (Remote or Local):**
+Once attached to the remote session (tmux), you can start training immediately:
+```bash
+# Run V1 Stability Plan
+python nexa_train/train.py --config-mode v1 --run-name my_stability_run
+
+# Run V2 Performance Plan (Distributed)
+torchrun --nproc_per_node=8 nexa_train/train.py --config-mode v2 --dry-run true
+```
+
+### 3. Run Infrastructure
+
+**Start Backend & Dashboard:**
+```bash
+# Using the orchestrator script
+./nexa_infra/scripts/orchestration/start_forge.sh
+```
+
+---
 
 ## Project Structure
 
 ```
 Nexa_compute/
-├── src/nexa_compute/api/          # FastAPI backend
-│   ├── main.py                    # Main application
-│   ├── auth.py                    # API key authentication
-│   ├── database.py                # SQLAlchemy models
-│   ├── endpoints/                 # API routes
-│   └── services/                  # Business logic
-├── frontend/                      # Next.js dashboard
-│   ├── app/                       # App Router pages
-│   ├── components/                # React components
-│   └── lib/                       # API client
-├── sdk/                           # Python SDK
-│   ├── nexa_forge/               # Client library
-│   ├── setup.py                  # Package config
-│   └── demo.py                   # Demo script
-├── docs/mintlify/                # Documentation
-│   ├── mint.json                 # Mintlify config
-│   ├── *.mdx                     # Doc pages
-│   └── logo/                     # Branding assets
-└── scripts/                      # Utility scripts
+├── nexa_data/           # Data Engineering (MS/MS, Tool Use, Distillation)
+├── nexa_train/          # Training Engine (Axolotl, HF Trainer)
+├── nexa_distill/        # Knowledge Distillation Pipeline
+├── nexa_eval/           # Evaluation & LLM-as-a-Judge
+├── nexa_inference/      # vLLM Serving & Tool Controller
+├── nexa_infra/          # IaC (Terraform), Monitoring, Provisioning
+├── nexa_ui/             # Dashboards (Streamlit/Next.js)
+├── src/
+│   └── nexa_compute/
+│       ├── api/         # FastAPI backend
+│       └── cli/         # CLI Entrypoint
+├── docs/
+│   ├── compute_plans/   # Training Configuration Templates (V1/V2/V3)
+│   ├── pipelines/       # Detailed Architecture Docs
+│   └── projects/        # Active Research Projects
+├── sdk/                 # Python Client SDK
+└── pyproject.toml       # Dependencies & Config
 ```
-
-## Core Features
-
-### Backend (FastAPI)
-
-- ✅ 6 job types (generate, audit, distill, train, evaluate, deploy)
-- ✅ Worker management & orchestration
-- ✅ API key authentication (SHA256 hashed)
-- ✅ Metered billing tracking
-- ✅ Real-time job status & logs
-
-### Frontend (Next.js)
-
-- ✅ Real-time dashboard with metrics
-- ✅ Expandable job logs
-- ✅ Worker fleet monitoring
-- ✅ Billing analytics with charts
-- ✅ Secure API key management
-- ✅ Dark theme UI
-
-### Python SDK
-
-- ✅ Simple client API
-- ✅ All 6 job types supported
-- ✅ Environment variable config
-- ✅ Comprehensive documentation
-
-### Documentation (Mintlify)
-
-- ✅ Getting started guides
-- ✅ API reference
-- ✅ Architecture diagrams
-- ✅ Pricing information
-- ✅ SDK examples
-
-## 💰 Freemium Model
-
-| Feature | Free Tier | Pro Plan |
-|---------|-----------|----------|
-| **GPU Hours/Month** | 10 | Unlimited |
-| **Concurrent Jobs** | 2 | 50 |
-| **Job Retention** | 7 days | 90 days |
-| **Support** | Community | Priority |
-| **SLA** | None | 99.9% |
-| **Price** | $0 | $99/mo + usage |
-
-## Python SDK Usage
-
-```python
-from nexa_forge import NexaForgeClient
-
-# Initialize client
-client = NexaForgeClient(api_key="nexa_...")
-
-# Generate data
-job1 = client.generate(domain="biology", num_samples=100)
-
-# Train model
-job2 = client.train(
-    model_id="llama-3-8b",
-    dataset_uri="s3://bucket/data.parquet",
-    epochs=3
-)
-
-# Monitor jobs
-status = client.get_job(job1['job_id'])
-all_jobs = client.list_jobs(limit=10)
-```
-
-## Security
-
-- API keys hashed with SHA256
-- One-time key display on creation
-- Secure modal with warnings
-- Revocation support
-- Ready for rate limiting
-
-## Tech Stack
-
-- **Backend**: FastAPI, SQLAlchemy, SQLite
-- **Frontend**: Next.js 16, Tailwind CSS, Recharts
-- **SDK**: Python 3.11+
-- **Docs**: Mintlify
-- **Deployment**: Docker Compose ready
-
-## Deployment
-
-### Docker Compose
-
-```bash
-./scripts/start_forge.sh
-```
-
-### Production
-
-- Frontend → Vercel
-- Backend → Railway/Render
-- Docs → Mintlify
-- Database → PostgreSQL
-
-## Documentation
-
-Full documentation available at <http://localhost:3001>
-
-Key sections:
-
-- **Getting Started**: Quick setup guide
-- **Architecture**: Platform overview
-- **API Reference**: Complete endpoint docs
-- **SDK Guide**: Python client usage
-- **Pricing**: Freemium model details
-
-## Contributing
-
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ---
 
-**Built with ❤️ using FastAPI, Next.js, and Mintlify**
+## Core Features
+
+### Compute Engine
+- **Unified Training CLI**: `nexa_train/train.py` supports flexible overrides and configuration modes (V1 Stability, V2 Performance, V3 Full).
+- **Infrastructure as Code**: Terraform modules for AWS GPU clusters.
+- **Observability**: Prometheus/Grafana stack for real-time hardware monitoring.
+- **Automated Provisioning**: One-command deployment to bare metal or cloud instances.
+
+### Managed API (Nexa Forge)
+- **6 Job Types**: Generate, Audit, Distill, Train, Evaluate, Deploy.
+- **Worker Orchestration**: Pull-based job queue for ephemeral workers.
+- **Security**: SHA256 API keys and metered billing.
+
+**Note**: Nexa Forge is currently under active development. Features and APIs are subject to change.
+
+---
+
+## Documentation
+
+For detailed instructions on how the platform works and what each component does, please refer to the documentation:
+
+- **[Documentation Map](docs/README.md)**: Central index for all documentation.
+- **[Infrastructure Guide](docs/pipelines/INFRASTRUCTURE.md)**: Docker, Provisioning, and Hardware.
+- **[Training Pipeline](docs/pipelines/TRAINING.md)**: Configuration and Execution.
+- **[Data Refinery](docs/pipelines/DATA.md)**: MS/MS and Synthetic Data.
+- **[Compute Plans](docs/compute_plans/README.md)**: Run Configurations.
+
+---
+
+## Contributing
+
+We welcome contributions! Please review our guidelines before submitting pull requests.
+
+See **[docs/conventions/](docs/conventions/)** for:
+- Coding Standards
+- Data Organization
+- Naming Conventions
+
+### Development Commands
+1.  **Linting**: `ruff check .`
+2.  **Testing**: `pytest tests/`
+3.  **Infrastructure**: Validate Terraform with `terraform validate`.
+
+---
+
+**Tags**: `machine-learning`, `distributed-training`, `infrastructure-as-code`, `mlops`, `knowledge-distillation`, `fastapi`, `pytorch`, `spectral-analysis`

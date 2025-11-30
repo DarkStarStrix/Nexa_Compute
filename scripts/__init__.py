@@ -1,1 +1,2 @@
-"""Helper package for Nexa Compute scripts."""
+"""Helper utilities for project-level scripts."""
+

@@ -31,6 +31,7 @@ class BaseJob(BaseModel):
     worker_id: Optional[str] = None
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    logs: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 

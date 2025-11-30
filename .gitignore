@@ -25,6 +25,8 @@ env/
 logs/
 artifacts/
 mlruns/
+var/
+!var/.gitkeep
 runs/logs/
 runs/checkpoints/
 *.log
@@ -90,6 +92,7 @@ notebooks/
 docs/TODAY_EXECUTION_PLAN.md
 docs/TODAY_SUMMARY.md
 PRODUCTION_RUN_SUMMARY.md
+Data_Pipeline_Spec.md
 
 # repo 
 nexa_inference/checkpoints

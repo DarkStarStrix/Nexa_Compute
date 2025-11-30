@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Play, Filter, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp, Terminal } from "lucide-react";
-import { getJobs, submitJob, Job } from "@/lib/api";
+import { getJobs, submitJob, getJob, Job } from "@/lib/api";
 import clsx from "clsx";
 
 export default function JobsPage() {
@@ -11,6 +11,7 @@ export default function JobsPage() {
     const [filter, setFilter] = useState<string>('all');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [expandedJob, setExpandedJob] = useState<string | null>(null);
+    const [jobLogs, setJobLogs] = useState<Record<string, string>>({});
 
     const fetchJobs = async () => {
         setLoading(true);
@@ -24,11 +25,33 @@ export default function JobsPage() {
         }
     };
 
+    const fetchJobLogs = async (jobId: string) => {
+        if (jobLogs[jobId]) return; // Already fetched
+        
+        try {
+            const job = await getJob(jobId);
+            // Logs come from the backend API (job.logs field)
+            const logs = job.logs || job.error 
+                ? `[ERROR] ${job.error || 'No error message'}\n${job.logs || 'No additional logs available'}`
+                : job.logs || `[INFO] Job ${job.status}\n[INFO] Worker: ${job.worker_id || 'Not assigned'}`;
+            setJobLogs(prev => ({ ...prev, [jobId]: logs }));
+        } catch (error) {
+            console.error("Failed to fetch job logs:", error);
+            setJobLogs(prev => ({ ...prev, [jobId]: `[ERROR] Failed to fetch logs: ${error}` }));
+        }
+    };
+
     useEffect(() => {
         fetchJobs();
         const interval = setInterval(fetchJobs, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (expandedJob) {
+            fetchJobLogs(expandedJob);
+        }
+    }, [expandedJob]);
 
     const handleCreateTestJob = async () => {
         setIsSubmitting(true);
@@ -37,6 +60,7 @@ export default function JobsPage() {
             await fetchJobs();
         } catch (error) {
             console.error("Failed to create job:", error);
+            alert(`Failed to create job: ${error}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -51,38 +75,6 @@ export default function JobsPage() {
             case 'running': return <RefreshCw className="h-4 w-4 text-blue-400 animate-spin" />;
             case 'pending': return <Clock className="h-4 w-4 text-slate-400" />;
             default: return <AlertCircle className="h-4 w-4 text-slate-400" />;
-        }
-    };
-
-    const getMockLogs = (job: Job) => {
-        if (job.status === 'failed') {
-            return `[2024-11-21 21:00:00] INFO: Starting job ${job.job_id}
-[2024-11-21 21:00:01] INFO: Allocating GPU worker...
-[2024-11-21 21:00:05] INFO: Worker assigned: worker-gpu-01
-[2024-11-21 21:00:10] INFO: Downloading dataset...
-[2024-11-21 21:01:30] ERROR: Connection timeout to S3 bucket
-[2024-11-21 21:01:31] ERROR: Job failed: Unable to access dataset
-[2024-11-21 21:01:31] INFO: Cleaning up resources...`;
-        } else if (job.status === 'completed') {
-            return `[2024-11-21 20:50:00] INFO: Starting job ${job.job_id}
-[2024-11-21 20:50:01] INFO: Allocating GPU worker...
-[2024-11-21 20:50:05] INFO: Worker assigned: worker-gpu-02
-[2024-11-21 20:50:10] INFO: Loading model...
-[2024-11-21 20:51:00] INFO: Processing batch 1/10...
-[2024-11-21 20:52:00] INFO: Processing batch 5/10...
-[2024-11-21 20:53:00] INFO: Processing batch 10/10...
-[2024-11-21 20:53:30] INFO: Uploading results to S3...
-[2024-11-21 20:53:45] INFO: Job completed successfully`;
-        } else if (job.status === 'running') {
-            return `[2024-11-21 21:08:00] INFO: Starting job ${job.job_id}
-[2024-11-21 21:08:01] INFO: Allocating GPU worker...
-[2024-11-21 21:08:05] INFO: Worker assigned: worker-gpu-01
-[2024-11-21 21:08:10] INFO: Loading model...
-[2024-11-21 21:09:00] INFO: Processing batch 3/20...
-[2024-11-21 21:09:20] INFO: GPU utilization: 95%`;
-        } else {
-            return `[2024-11-21 21:09:00] INFO: Job ${job.job_id} queued
-[2024-11-21 21:09:01] INFO: Waiting for available worker...`;
         }
     };
 
@@ -197,20 +189,22 @@ export default function JobsPage() {
                                                             <p className="text-slate-300">{new Date(job.created_at).toLocaleString()}</p>
                                                         </div>
                                                         <div>
-                                                            <p className="text-xs text-slate-500 uppercase font-bold mb-1">User</p>
-                                                            <p className="text-slate-300">{job.user_id}</p>
+                                                            <p className="text-xs text-slate-500 uppercase font-bold mb-1">Updated</p>
+                                                            <p className="text-slate-300">{new Date(job.updated_at).toLocaleString()}</p>
                                                         </div>
                                                     </div>
 
-                                                    <div>
-                                                        <div className="flex items-center mb-2">
-                                                            <Terminal className="h-4 w-4 text-slate-500 mr-2" />
-                                                            <p className="text-xs text-slate-500 uppercase font-bold">Logs</p>
+                                                    {jobLogs[job.job_id] && (
+                                                        <div>
+                                                            <div className="flex items-center mb-2">
+                                                                <Terminal className="h-4 w-4 text-slate-500 mr-2" />
+                                                                <p className="text-xs text-slate-500 uppercase font-bold">Logs</p>
+                                                            </div>
+                                                            <div className="bg-slate-900 rounded-md p-4 border border-slate-800 font-mono text-xs text-slate-300 overflow-x-auto max-h-64 overflow-y-auto">
+                                                                <pre className="whitespace-pre-wrap">{jobLogs[job.job_id]}</pre>
+                                                            </div>
                                                         </div>
-                                                        <div className="bg-slate-900 rounded-md p-4 border border-slate-800 font-mono text-xs text-slate-300 overflow-x-auto max-h-64 overflow-y-auto">
-                                                            <pre className="whitespace-pre-wrap">{getMockLogs(job)}</pre>
-                                                        </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

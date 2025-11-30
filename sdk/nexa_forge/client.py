@@ -22,7 +22,8 @@ class NexaForgeClient:
     
     def __init__(self, api_key: Optional[str] = None, api_url: Optional[str] = None):
         self.api_key = api_key or os.getenv("NEXA_API_KEY")
-        self.api_url = api_url or os.getenv("NEXA_API_URL", "http://localhost:8000/api")
+        raw_url = api_url or os.getenv("NEXA_API_URL", "http://localhost:8000/api")
+        self.api_url = self._normalize_api_url(raw_url)
         
         if not self.api_key:
             print("Warning: No API Key provided. Some endpoints may fail.")
@@ -31,6 +32,13 @@ class NexaForgeClient:
             "Content-Type": "application/json",
             "X-Nexa-Api-Key": self.api_key or ""
         }
+
+    @staticmethod
+    def _normalize_api_url(url: str) -> str:
+        sanitized = url.rstrip("/")
+        if not sanitized.endswith("/api"):
+            sanitized = f"{sanitized}/api"
+        return sanitized
 
     def _post(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
         url = f"{self.api_url}/{endpoint}"

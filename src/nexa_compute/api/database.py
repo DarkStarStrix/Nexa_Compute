@@ -1,6 +1,5 @@
-from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer, Float, Boolean, ForeignKey, Enum as SQLEnum
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer, Float, Boolean, ForeignKey, Enum as SQLEnum, Text
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime
 from nexa_compute.api.config import get_settings
 from nexa_compute.api.models import JobStatus, JobType, WorkerStatus, BillingResourceType
@@ -51,6 +50,7 @@ class JobDB(Base):
     worker_id = Column(String, index=True, nullable=True)
     result = Column(JSON, nullable=True)
     error = Column(String, nullable=True)
+    logs = Column(Text, nullable=True)  # Store job execution logs
 
 class WorkerDB(Base):
     __tablename__ = "workers"

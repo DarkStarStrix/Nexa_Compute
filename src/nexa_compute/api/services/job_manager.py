@@ -32,16 +32,26 @@ class JobManager:
             query = query.filter(JobDB.status == status)
         return query.order_by(JobDB.created_at.desc()).offset(skip).limit(limit).all()
 
-    def update_job_status(self, job_id: str, status: JobStatus, result: Optional[Dict[str, Any]] = None, error: Optional[str] = None) -> Optional[JobDB]:
+    def update_job_status(
+        self, 
+        job_id: str, 
+        status: JobStatus, 
+        result: Optional[Dict[str, Any]] = None, 
+        error: Optional[str] = None,
+        logs: Optional[str] = None
+    ) -> Optional[JobDB]:
         job = self.get_job(job_id)
         if not job:
             return None
         
         job.status = status
+        job.updated_at = datetime.utcnow()
         if result:
             job.result = result
         if error:
             job.error = error
+        if logs:
+            job.logs = logs
         
         self.db.commit()
         self.db.refresh(job)

@@ -2,13 +2,44 @@ import logging
 import traceback
 from datetime import datetime
 from typing import Dict, Any
+import sys
+from pathlib import Path
 
-from src.server.models import BaseJob
-from src.nexa.data_quality import audit_dataset
-from src.nexa.distillation import run_distillation
-from src.nexa.training import run_training
-from src.nexa.evaluation import run_evaluation
-from src.nexa.deployment import deploy_model
+# Add src to path for imports
+SRC_DIR = Path(__file__).resolve().parent.parent.parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+try:
+    from src.server.models import BaseJob
+except ImportError:
+    # Fallback if running from different context
+    BaseJob = None
+
+try:
+    from src.nexa.data_quality import audit_dataset
+except ImportError:
+    audit_dataset = None
+
+try:
+    from src.nexa.distillation import run_distillation
+except ImportError:
+    run_distillation = None
+
+try:
+    from src.nexa.training import run_training
+except ImportError:
+    run_training = None
+
+try:
+    from src.nexa.evaluation import run_evaluation
+except ImportError:
+    run_evaluation = None
+
+try:
+    from src.nexa.deployment import deploy_model
+except ImportError:
+    deploy_model = None
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +50,7 @@ def process_job(job: Dict[str, Any]) -> Dict[str, Any]:
     """
     job_id = job["job_id"]
     job_type = job["job_type"]
-    payload = job["payload"]
+    payload = job.get("payload", {})
     
     logger.info(f"Processing job {job_id} ({job_type})")
     job["status"] = "running"
@@ -28,15 +59,33 @@ def process_job(job: Dict[str, Any]) -> Dict[str, Any]:
     try:
         result = None
         if job_type == "audit":
-            result = audit_dataset(**payload)
+            if audit_dataset:
+                result = audit_dataset(**payload)
+            else:
+                raise ImportError("audit_dataset not available")
         elif job_type == "distill":
-            result = run_distillation(**payload)
+            if run_distillation:
+                result = run_distillation(**payload)
+            else:
+                raise ImportError("run_distillation not available")
         elif job_type == "train":
-            result = run_training(**payload)
+            if run_training:
+                result = run_training(**payload)
+            else:
+                raise ImportError("run_training not available")
         elif job_type == "evaluate":
-            result = run_evaluation(**payload)
+            if run_evaluation:
+                result = run_evaluation(**payload)
+            else:
+                raise ImportError("run_evaluation not available")
         elif job_type == "deploy":
-            result = deploy_model(**payload)
+            if deploy_model:
+                result = deploy_model(**payload)
+            else:
+                raise ImportError("deploy_model not available")
+        elif job_type == "generate":
+            # Data generation - placeholder
+            result = {"message": "Data generation not yet implemented", "samples": 0}
         else:
             raise ValueError(f"Unknown job type: {job_type}")
             

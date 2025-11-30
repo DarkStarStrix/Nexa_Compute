@@ -1,0 +1,32 @@
+{
+  "dataset": "gems_test",
+  "run_timestamp": "2025-11-24T20:26:55.493115",
+  "stages": {
+    "canonicalization": {
+      "total_spectra": 0,
+      "integrity_errors": 0,
+      "integrity_error_rate": 0.0,
+      "attrition": 0,
+      "attrition_rate": 0.0,
+      "attrition_reasons": {},
+      "status": "PASS"
+    },
+    "shard_construction": {
+      "shards_written": 0,
+      "samples_sharded": 0,
+      "duplicates": 0,
+      "checksum_failures": 0,
+      "schema_mismatches": 0,
+      "status": "PASS"
+    },
+    "training_readiness": {
+      "shards_loaded": 0,
+      "nan_batches": 0,
+      "inf_batches": 0,
+      "loader_failures": 0,
+      "status": "PASS"
+    }
+  },
+  "overall_status": "PASS",
+  "recommendations": []
+}

@@ -15,13 +15,13 @@ test:
 	${PYTHON} -m pytest tests -q
 
 train:
-	${PYTHON} scripts/cli.py train --config ${CONFIG}
+	${PYTHON} src/nexa_compute/cli/main.py launch --config ${CONFIG}
 
 evaluate:
-	${PYTHON} scripts/cli.py evaluate --config ${CONFIG}
+	${PYTHON} src/nexa_compute/cli/main.py evaluate --config ${CONFIG}
 
 package:
-	${PYTHON} scripts/cli.py package --config ${CONFIG} --output artifacts/package
+	${PYTHON} src/nexa_compute/cli/main.py build-containers
 
 clean:
 	rm -rf artifacts logs .pytest_cache __pycache__

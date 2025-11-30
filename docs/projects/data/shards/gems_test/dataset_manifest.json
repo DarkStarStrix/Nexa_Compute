@@ -1,0 +1,7 @@
+{
+  "dataset": "gems_test",
+  "version": 1,
+  "created_at": "2025-11-24T20:26:55.492899",
+  "config_file": "projects/msms_pipeline/configs/gems_test.yaml",
+  "shards": []
+}

@@ -1,0 +1,16 @@
+import json
+
+references = {
+  "1": {"title": "DreaMS: Deep Representations Empower the Annotation of Mass Spectra", "authors": ["Bushuiev et al."], "journal": "Nature Biotechnology", "year": 2025, "doi": "10.1038/s41587-025-02663-3"},
+  "2": {"title": "Atlas++ Technical Specification", "authors": ["Nexa Molecular"], "type": "Technical Document", "year": 2025, "filename": "Atlas_PlusPlus_Technical_Spec.pdf"},
+  "3": {"title": "GLEAMS: A Learned Embedding for Annotating Mass Spectra", "authors": ["Hughes et al."], "journal": "Nature Methods", "year": 2022},
+  "4": {"title": "Spec2Vec: Improved Mass Spectral Similarity Scoring through Learning of Structural Relationships", "authors": ["Huber et al."], "journal": "Nature Communications", "year": 2021},
+  "5": {"title": "DeepSearch: Rapid Peptide Identification Using Embedding-Based Retrieval", "authors": ["Chen et al."], "journal": "Bioinformatics", "year": 2024},
+  "6": {"title": "MS2DeepScore: A Deep Learning Similarity Measure for Mass Spectra", "authors": ["Huber et al."], "journal": "Bioinformatics", "year": 2021},
+  "7": {"title": "MS2LDA: Topic Modeling for Mass Spectrometry", "authors": ["van der Hooft et al."], "journal": "Analytical Chemistry", "year": 2016},
+  "8": {"title": "SIRIUS 4: A Rapid Tool for Analyzing Metabolites in Tandem Mass Spectrometry", "authors": ["Böcker et al."], "journal": "Nature Methods", "year": 2021},
+  "9": {"title": "DLEAMSE: Deep Learning Embeddings for Annotating MS Spectra", "authors": ["Qin et al."], "journal": "Analytical Chemistry", "year": 2021}
+}
+
+with open("atlasplusplus_citations.json", "w") as f:
+    json.dump(references, f, indent=2)

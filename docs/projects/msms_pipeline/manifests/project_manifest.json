@@ -1,0 +1,9 @@
+{
+  "project": "msms_pipeline",
+  "name": "MS/MS Data Processing Pipeline",
+  "version": "1.0.0",
+  "description": "Deterministic pipeline for processing MS/MS HDF5 datasets into training-ready Arrow/Parquet shards",
+  "created_at": "2025-01-01T00:00:00Z",
+  "spec": "docs/Data_Pipeline_spec.md"
+}
+
