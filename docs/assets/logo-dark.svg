@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40">
-  <rect width="160" height="40" rx="8" fill="#0F172A"/>
-  <path d="M22 28V22.4L34.8 8h-12.4V12H30L18 25.6V32h20v-4H22z" fill="#38BDF8"/>
-  <text x="60" y="26" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#F8FAFC">NexaCompute</text>
-</svg>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40"><rect width="160" height="40" fill="#0F172A" rx="8"/><path fill="#38BDF8" d="M22 28V22.4L34.8 8h-12.4V12H30L18 25.6V32h20v-4H22z"/><text x="60" y="26" fill="#F8FAFC" font-family="Helvetica, Arial, sans-serif" font-size="16">NexaCompute</text></svg>
