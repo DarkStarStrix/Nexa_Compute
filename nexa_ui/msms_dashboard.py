@@ -19,7 +19,7 @@ STREAMLIT_AVAILABLE = True
 try:
     import streamlit as st
     st.set_page_config(
-        page_title="MS/MS Data Inspector",
+        page_title="MS/MS Dashboard",
         page_icon="🧪",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -30,6 +30,8 @@ except ImportError:
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SHARDS_ROOT = PROJECT_ROOT / "data" / "shards"
+EVAL_RESULTS_ROOT = PROJECT_ROOT / "artifacts" / "eval"
+RESULTS_ROOT = PROJECT_ROOT / "results" / "evaluation"
 
 
 def list_datasets() -> list[str]:
@@ -226,6 +228,154 @@ def load_dataset_manifest(dataset: str) -> dict:
         return {}
     with open(manifest_path) as f:
         return json.load(f)
+
+
+def list_evaluation_datasets() -> list[str]:
+    """List datasets that have evaluation results."""
+    eval_datasets = set()
+    
+    # Check multiple possible locations
+    eval_paths = [
+        EVAL_RESULTS_ROOT,
+        RESULTS_ROOT,
+    ]
+    
+    for eval_path in eval_paths:
+        if eval_path.exists():
+            for item in eval_path.iterdir():
+                if item.is_dir():
+                    # Check if directory has evaluation files
+                    if any(item.glob("*.json")) or any(item.glob("*.parquet")):
+                        eval_datasets.add(item.name)
+    
+    return sorted(list(eval_datasets))
+
+
+def load_evaluation_results(dataset: str, checkpoint: Optional[str] = None) -> dict:
+    """Load evaluation results for a dataset, optionally filtered by checkpoint."""
+    results = {}
+    
+    # Check multiple possible locations
+    eval_paths = [
+        EVAL_RESULTS_ROOT / dataset,
+        RESULTS_ROOT / dataset,
+        SHARDS_ROOT / dataset / "eval",
+    ]
+    
+    for eval_path in eval_paths:
+        if eval_path.exists():
+            # Look for JSON files
+            for json_file in eval_path.glob("*.json"):
+                if checkpoint and checkpoint not in json_file.name:
+                    continue
+                try:
+                    with open(json_file) as f:
+                        data = json.load(f)
+                        results[json_file.stem] = data
+                except:
+                    pass
+            
+            # Look for parquet files
+            for parquet_file in eval_path.glob("*.parquet"):
+                if checkpoint and checkpoint not in parquet_file.name:
+                    continue
+                try:
+                    df = pd.read_parquet(parquet_file)
+                    results[parquet_file.stem] = df.to_dict("records")
+                except:
+                    pass
+    
+    return results
+
+
+def get_adoption_tier(metrics: dict) -> Tuple[str, dict]:
+    """Determine adoption tier based on metrics."""
+    tier1_thresholds = {
+        "top10_accuracy": 0.05,
+        "tanimoto_at1": 0.50,
+        "hitrate_at1": 0.35,
+        "peaks_explained": 0.60,
+        "intensity_explained": 0.60,
+        "formula_match": 0.90,
+    }
+    
+    tier2_thresholds = {
+        "top10_accuracy": 0.10,
+        "top1_tanimoto": 0.55,
+        "mces_at1": 9.0,
+        "hitrate_at1": 0.50,
+        "intensity_explained": 0.70,
+        "candidate_reduction": 10.0,
+        "class_accuracy": 0.80,
+    }
+    
+    tier3_thresholds = {
+        "top1_accuracy": 0.08,
+        "top10_accuracy": 0.20,
+        "tanimoto_at1": 0.60,
+        "mces_at1": 8.0,
+        "hitrate_at1": 0.60,
+        "hitrate_at20": 0.95,
+        "intensity_explained": 0.80,
+        "candidate_reduction": 30.0,
+    }
+    
+    tier_scores = {"Tier 1": 0, "Tier 2": 0, "Tier 3": 0}
+    tier_details = {"Tier 1": [], "Tier 2": [], "Tier 3": []}
+    
+    # Check Tier 3
+    for metric, threshold in tier3_thresholds.items():
+        value = metrics.get(metric)
+        if value is not None:
+            if metric == "mces_at1":  # Lower is better
+                if value <= threshold:
+                    tier_scores["Tier 3"] += 1
+                    tier_details["Tier 3"].append(f"{metric}: {value:.3f} ≤ {threshold}")
+            else:  # Higher is better
+                if value >= threshold:
+                    tier_scores["Tier 3"] += 1
+                    tier_details["Tier 3"].append(f"{metric}: {value:.3f} ≥ {threshold}")
+    
+    # Check Tier 2
+    for metric, threshold in tier2_thresholds.items():
+        value = metrics.get(metric)
+        if value is not None:
+            if metric == "mces_at1":  # Lower is better
+                if value <= threshold:
+                    tier_scores["Tier 2"] += 1
+                    tier_details["Tier 2"].append(f"{metric}: {value:.3f} ≤ {threshold}")
+            else:  # Higher is better
+                if value >= threshold:
+                    tier_scores["Tier 2"] += 1
+                    tier_details["Tier 2"].append(f"{metric}: {value:.3f} ≥ {threshold}")
+    
+    # Check Tier 1
+    for metric, threshold in tier1_thresholds.items():
+        value = metrics.get(metric)
+        if value is not None:
+            if value >= threshold:
+                tier_scores["Tier 1"] += 1
+                tier_details["Tier 1"].append(f"{metric}: {value:.3f} ≥ {threshold}")
+    
+    # Determine current tier
+    if tier_scores["Tier 3"] >= len(tier3_thresholds) * 0.8:
+        current_tier = "Tier 3: Viral"
+    elif tier_scores["Tier 2"] >= len(tier2_thresholds) * 0.8:
+        current_tier = "Tier 2: Turning Point"
+    elif tier_scores["Tier 1"] >= len(tier1_thresholds) * 0.8:
+        current_tier = "Tier 1: Taken Seriously"
+    else:
+        current_tier = "Below Tier 1"
+    
+    return current_tier, {
+        "scores": tier_scores,
+        "details": tier_details,
+        "thresholds": {
+            "Tier 1": tier1_thresholds,
+            "Tier 2": tier2_thresholds,
+            "Tier 3": tier3_thresholds,
+        }
+    }
 
 
 def plot_spectrum(mzs: list[float], ints: list[float], title: str = "Spectrum") -> alt.Chart:
@@ -515,14 +665,45 @@ def main_cli() -> None:
         sys.exit(1)
 
 
+def list_evaluation_datasets() -> list[str]:
+    """List datasets that have evaluation results."""
+    eval_datasets = set()
+    
+    # Check multiple possible locations
+    eval_paths = [
+        EVAL_RESULTS_ROOT,
+        RESULTS_ROOT,
+    ]
+    
+    for eval_path in eval_paths:
+        if eval_path.exists():
+            for item in eval_path.iterdir():
+                if item.is_dir():
+                    # Check if directory has evaluation files
+                    if any(item.glob("*.json")) or any(item.glob("*.parquet")):
+                        eval_datasets.add(item.name)
+    
+    return sorted(list(eval_datasets))
+
+
 def main():
     """Main dashboard application."""
-    st.title("🧪 MS/MS Data Inspector")
+    st.title("🧪 MS/MS Dashboard")
+    st.markdown("**Comprehensive analysis and evaluation platform for MS/MS spectrum-to-structure models**")
 
     datasets = list_datasets()
-    if not datasets:
-        st.warning(f"No datasets found in {SHARDS_ROOT}. Run the pipeline first.")
-        return
+    eval_datasets = list_evaluation_datasets()
+    
+    # Load evaluation results from all available sources
+    all_eval_results = {}
+    for eval_dataset in eval_datasets:
+        results = load_evaluation_results(eval_dataset)
+        all_eval_results.update(results)
+    
+    # If no datasets but we have eval results, use eval datasets
+    if not datasets and eval_datasets:
+        datasets = eval_datasets
+        st.info(f"📊 Showing evaluation results. No data shards found in {SHARDS_ROOT}.")
 
     with st.sidebar:
         st.header("Dataset Selection")
@@ -537,349 +718,846 @@ def main():
                 st.cache_data.clear()
                 st.success("Cache cleared!")
         
-        selected_dataset = st.selectbox("Dataset", datasets)
+        if datasets:
+            selected_dataset = st.selectbox("Dataset", datasets)
+        else:
+            selected_dataset = None
+            st.warning(f"No datasets found in {SHARDS_ROOT}. Run the pipeline first or check evaluation results.")
 
-        # Run ID selection
-        run_ids = list_run_ids(selected_dataset)
-        if run_ids:
-            selected_run_id = st.selectbox("Run ID", ["All"] + run_ids, index=0)
-            if selected_run_id == "All":
+        # Run ID selection (only if dataset exists in shards)
+        if selected_dataset and SHARDS_ROOT.joinpath(selected_dataset).exists():
+            run_ids = list_run_ids(selected_dataset)
+            if run_ids:
+                selected_run_id = st.selectbox("Run ID", ["All"] + run_ids, index=0)
+                if selected_run_id == "All":
+                    selected_run_id = None
+            else:
                 selected_run_id = None
+                st.info("No run IDs found")
         else:
             selected_run_id = None
-            st.info("No run IDs found")
 
         splits = ["train", "val", "test", "shards"]
         selected_split = st.selectbox("Split", splits)
 
-        shards = list_shards(selected_dataset, selected_split, run_id=selected_run_id)
-        if shards:
-            selected_shard_name = st.selectbox("Shard", [s.name for s in shards], index=0)
-            selected_shard_path = next(s for s in shards if s.name == selected_shard_name)
+        if selected_dataset and SHARDS_ROOT.joinpath(selected_dataset).exists():
+            shards = list_shards(selected_dataset, selected_split, run_id=selected_run_id)
+            if shards:
+                selected_shard_name = st.selectbox("Shard", [s.name for s in shards], index=0)
+                selected_shard_path = next(s for s in shards if s.name == selected_shard_name)
+            else:
+                st.warning(f"No shards found for {selected_split} split" + (f" (run: {selected_run_id})" if selected_run_id else ""))
+                selected_shard_path = None
         else:
-            st.warning(f"No shards found for {selected_split} split" + (f" (run: {selected_run_id})" if selected_run_id else ""))
             selected_shard_path = None
 
-    tabs = st.tabs([
-        "Overview", 
-        "Structural Integrity", 
-        "Semantic Quality", 
-        "Pipeline Health",
-        "Shards", 
-        "Samples"
+    # Load global data
+    quality_report = {}
+    metrics = {}
+    manifest = {}
+    eval_results = {}
+    
+    if selected_dataset:
+        quality_report = load_quality_report(selected_dataset)
+        metrics = load_metrics(selected_dataset)
+        manifest = load_dataset_manifest(selected_dataset)
+        eval_results = load_evaluation_results(selected_dataset)
+    
+    # If no eval results for selected dataset, try loading from all eval datasets
+    if not eval_results:
+        for eval_dataset in eval_datasets:
+            results = load_evaluation_results(eval_dataset)
+            if results:
+                eval_results.update(results)
+                if not selected_dataset:
+                    selected_dataset = eval_dataset
+                break  # Use first available dataset
+
+    # ========== MAIN TABS: DATA INSPECTOR AND EVALUATION ==========
+    main_tabs = st.tabs([
+        "📊 MS/MS Data Inspector",
+        "🎯 MS/MS Evaluation"
     ])
 
-    # Load global data
-    quality_report = load_quality_report(selected_dataset)
-    metrics = load_metrics(selected_dataset)
-    manifest = load_dataset_manifest(selected_dataset)
-
-    with tabs[0]:
-        st.header("Overview")
+    # ========== MS/MS DATA INSPECTOR SECTION ==========
+    with main_tabs[0]:
+        st.header("📊 MS/MS Data Inspector")
+        st.markdown("Inspect and analyze MS/MS data shards, quality metrics, and sample statistics")
         
-        if manifest:
-            st.subheader("Dataset Manifest")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Dataset", manifest.get("dataset", "N/A"))
-            with col2:
-                st.metric("Version", manifest.get("version", "N/A"))
-            with col3:
-                st.metric("Total Shards", len(manifest.get("shards", [])))
+        data_tabs = st.tabs([
+            "Overview",
+            "Data Quality",
+            "Data Statistics",
+            "Shards & Samples"
+        ])
+        
+        with data_tabs[0]:
+            st.subheader("Dataset Overview")
             
-            total_samples = sum(shard.get("num_samples", 0) for shard in manifest.get("shards", []))
-            st.metric("Total Samples", total_samples)
-            
-            if manifest.get("shards"):
-                st.write("**Shard Summary:**")
-                shard_summary = []
-                for shard in manifest["shards"]:
-                    shard_summary.append({
-                        "Split": shard.get("split", "N/A"),
-                        "Shard Index": shard.get("shard_index", "N/A"),
-                        "Samples": shard.get("num_samples", 0),
-                        "Size (bytes)": shard.get("file_size_bytes", 0),
-                    })
-                shard_df = pd.DataFrame(shard_summary)
-                st.dataframe(shard_df, use_container_width=True)
-
-        if quality_report:
-            st.subheader("Overall Quality Status")
-            status = quality_report.get("overall_status", "UNKNOWN")
-            if status == "PASS":
-                st.success(f"✅ {status}")
-            elif status == "WARN":
-                st.warning(f"⚠️ {status}")
+            if not datasets and not eval_datasets:
+                st.warning(f"No datasets found in {SHARDS_ROOT}. Run the pipeline first or check evaluation results.")
             else:
-                st.error(f"❌ {status}")
+                # Dataset Information
+                if manifest:
+                    st.subheader("Dataset Information")
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Dataset", manifest.get("dataset", "N/A"))
+                    with col2:
+                        st.metric("Version", manifest.get("version", "N/A"))
+                    with col3:
+                        st.metric("Total Shards", len(manifest.get("shards", [])))
+                    with col4:
+                        total_samples = sum(shard.get("num_samples", 0) for shard in manifest.get("shards", []))
+                        st.metric("Total Samples", f"{total_samples:,}")
+                    
+                    if manifest.get("shards"):
+                        st.write("**Shard Summary:**")
+                        shard_summary = []
+                        for shard in manifest["shards"]:
+                            shard_summary.append({
+                                "Split": shard.get("split", "N/A"),
+                                "Shard Index": shard.get("shard_index", "N/A"),
+                                "Samples": shard.get("num_samples", 0),
+                                "Size (MB)": f"{shard.get('file_size_bytes', 0) / (1024*1024):.2f}",
+                            })
+                        shard_df = pd.DataFrame(shard_summary)
+                        st.dataframe(shard_df, use_container_width=True, hide_index=True)
 
-    with tabs[1]:
-        st.header("Structural Integrity")
-        
-        # 1. Error Rate Overview
-        st.subheader("Error Rate Overview")
-        col1, col2, col3, col4 = st.columns(4)
-        
-        total_spectra = metrics.get("total_spectra", 0)
-        
-        # Try to get integrity error count from metrics or quality report
-        invalid_spectra = metrics.get("integrity_error_count", 0)
-        if invalid_spectra == 0 and quality_report:
-             invalid_spectra = quality_report.get("stages", {}).get("canonicalization", {}).get("integrity_errors", 0)
-             
-        error_rate = metrics.get("integrity_error_rate", 0.0)
-        if error_rate == 0 and quality_report:
-            error_rate = quality_report.get("stages", {}).get("canonicalization", {}).get("integrity_error_rate", 0.0)
+                # Quality Status
+                if quality_report:
+                    st.subheader("Quality Status")
+                    status = quality_report.get("overall_status", "UNKNOWN")
+                    col1, col2 = st.columns([1, 3])
+                    with col1:
+                        if status == "PASS":
+                            st.success(f"✅ {status}")
+                        elif status == "WARN":
+                            st.warning(f"⚠️ {status}")
+                        else:
+                            st.error(f"❌ {status}")
+                    with col2:
+                        if quality_report.get("stages"):
+                            stages = quality_report["stages"]
+                            canon = stages.get("canonicalization", {})
+                            if canon:
+                                st.write(f"**Integrity Error Rate:** {canon.get('integrity_error_rate', 0):.4%}")
+                                st.write(f"**Attrition Rate:** {canon.get('attrition_rate', 0):.4%}")
 
-        with col1:
-            st.metric("Total Spectra Processed", f"{total_spectra:,}")
-        with col2:
-            st.metric("Invalid Spectra Caught", f"{invalid_spectra:,}")
-        with col3:
-            st.metric("Error Rate", f"{error_rate:.4%}")
-        with col4:
-            # Placeholder for invalid rows written, assume 0 if passed
-            st.metric("Invalid Rows Written", "0" if status == "PASS" else "Check Logs")
+                # Pipeline Metrics Summary
+                if metrics:
+                    st.subheader("Pipeline Metrics")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        throughput = metrics.get("samples_per_second", 0)
+                        st.metric("Throughput", f"{throughput:.1f} spectra/sec")
+                    with col2:
+                        elapsed = metrics.get("elapsed_seconds", 0)
+                        st.metric("Total Runtime", f"{elapsed:.1f}s")
+                    with col3:
+                        total_spectra = metrics.get("total_spectra", 0)
+                        st.metric("Total Spectra", f"{total_spectra:,}")
 
-        # 2. Validation Failure Types
-        st.subheader("Validation Failure Types")
-        
-        failures = metrics.get("integrity_errors", {})
-        if not failures and quality_report:
-             failures = quality_report.get("stages", {}).get("canonicalization", {}).get("attrition_reasons", {})
-        
-        if failures:
-            failure_df = pd.DataFrame([
-                {"Error Type": k, "Count": v} for k, v in failures.items()
-            ])
+        with data_tabs[1]:
+            st.subheader("Data Quality")
             
-            chart = (
-                alt.Chart(failure_df)
-                .mark_bar()
-                .encode(
-                    x=alt.X("Error Type", sort="-y"),
-                    y="Count",
-                    color=alt.Color("Error Type", legend=None)
-                )
-                .properties(title="Validation Failures by Type", height=300)
-            )
-            st.altair_chart(chart, use_container_width=True)
-        else:
-            st.info("No validation failures recorded.")
-
-        # 3. Duplicate ID Watchdog
-        st.subheader("Duplicate ID Watchdog")
-        duplicates_count = 0
-        if quality_report:
-             duplicates_count = quality_report.get("stages", {}).get("shard_construction", {}).get("duplicates", 0)
-        
-        st.metric("Duplicates Detected", duplicates_count)
-        
-        if duplicates_count > 0:
-            st.error(f"Found {duplicates_count} duplicates! Check data integrity.")
-        else:
-            st.success("No duplicates detected across processed shards.")
-
-    with tabs[2]:
-        st.header("Semantic Quality")
-        
-        if selected_shard_path:
-            stats = get_shard_statistics(selected_shard_path)
+            # Error Rate Overview
+            st.subheader("Error Rate Overview")
+            col1, col2, col3, col4 = st.columns(4)
             
-            # 4. Peak Count Distribution
-            st.subheader("Peak Count Distribution")
-            if "peak_counts" in stats and "all" in stats["peak_counts"]:
-                peak_data = pd.DataFrame({"peaks": stats["peak_counts"]["all"]})
-                
-                peak_chart = (
-                    alt.Chart(peak_data)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X("peaks:Q", bin=alt.Bin(maxbins=50), title="Number of Peaks"),
-                        y=alt.Y("count()", title="Frequency")
-                    )
-                    .properties(title="Peak Count Histogram")
-                )
-                st.altair_chart(peak_chart, use_container_width=True)
-                
-                col1, col2 = st.columns(2)
-                col1.metric("Mean Peaks", f"{stats['peak_counts']['mean']:.1f}")
-                col2.metric("Median Peaks", f"{stats['peak_counts']['median']:.1f}")
-            
-            # 5. Precursor m/z Distribution
-            st.subheader("Precursor m/z Distribution")
-            if "precursor_mz" in stats and "all" in stats["precursor_mz"]:
-                prec_data = pd.DataFrame({"mz": stats["precursor_mz"]["all"]})
-                
-                prec_chart = (
-                    alt.Chart(prec_data)
-                    .mark_bar()
-                    .encode(
-                        x=alt.X("mz:Q", bin=alt.Bin(maxbins=50), title="Precursor m/z"),
-                        y=alt.Y("count()", title="Frequency")
-                    )
-                    .properties(title="Precursor m/z Histogram")
-                )
-                st.altair_chart(prec_chart, use_container_width=True)
+            total_spectra = metrics.get("total_spectra", 0)
+            invalid_spectra = metrics.get("integrity_error_count", 0)
+            if invalid_spectra == 0 and quality_report:
+                 invalid_spectra = quality_report.get("stages", {}).get("canonicalization", {}).get("integrity_errors", 0)
+                 
+            error_rate = metrics.get("integrity_error_rate", 0.0)
+            if error_rate == 0 and quality_report:
+                error_rate = quality_report.get("stages", {}).get("canonicalization", {}).get("integrity_error_rate", 0.0)
 
-            # 6. Intensity Quantile Stability
-            st.subheader("Intensity Quantiles")
-            if "intensity_quantiles" in stats:
-                q_data = pd.DataFrame([
-                    {"Quantile": k, "Value": v} for k, v in stats["intensity_quantiles"].items()
-                ])
-                st.dataframe(q_data.set_index("Quantile").T)
-
-            # 7. Adduct & Charge-State Distribution
-            st.subheader("Adduct & Charge Distribution")
-            col1, col2 = st.columns(2)
+            status = "UNKNOWN"
+            if quality_report:
+                status = quality_report.get("overall_status", "UNKNOWN")
             
             with col1:
-                if "charge_distribution" in stats:
-                    charge_df = pd.DataFrame([
-                        {"Charge": k, "Count": v} for k, v in stats["charge_distribution"].items()
-                    ])
-                    charge_chart = (
-                        alt.Chart(charge_df)
-                        .mark_arc()
-                        .encode(
-                            theta="Count",
-                            color="Charge:N",
-                            tooltip=["Charge", "Count"]
-                        )
-                        .properties(title="Charge State Distribution")
-                    )
-                    st.altair_chart(charge_chart, use_container_width=True)
-            
+                st.metric("Total Spectra", f"{total_spectra:,}")
             with col2:
-                if "adduct_distribution" in stats:
-                    adduct_df = pd.DataFrame([
-                        {"Adduct": k, "Count": v} for k, v in stats["adduct_distribution"].items()
+                st.metric("Invalid Spectra", f"{invalid_spectra:,}")
+            with col3:
+                st.metric("Error Rate", f"{error_rate:.4%}")
+            with col4:
+                duplicates_count = 0
+                if quality_report:
+                    duplicates_count = quality_report.get("stages", {}).get("shard_construction", {}).get("duplicates", 0)
+                st.metric("Duplicates", duplicates_count)
+
+            # Validation Failure Types
+            st.subheader("Validation Failure Types")
+            failures = metrics.get("integrity_errors", {})
+            if not failures and quality_report:
+                 failures = quality_report.get("stages", {}).get("canonicalization", {}).get("attrition_reasons", {})
+            
+            if failures:
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    failure_df = pd.DataFrame([
+                        {"Error Type": k.replace("_", " ").title(), "Count": v} for k, v in failures.items()
                     ])
-                    adduct_chart = (
-                        alt.Chart(adduct_df)
+                    chart = (
+                        alt.Chart(failure_df)
                         .mark_bar()
                         .encode(
-                            y=alt.Y("Adduct", sort="-x"),
-                            x="Count",
-                            tooltip=["Adduct", "Count"]
+                            x=alt.X("Error Type", sort="-y", title=""),
+                            y=alt.Y("Count", title="Count"),
+                            color=alt.Color("Error Type", legend=None, scale=alt.Scale(scheme="category20"))
                         )
-                        .properties(title="Adduct Distribution")
+                        .properties(height=300)
                     )
-                    st.altair_chart(adduct_chart, use_container_width=True)
+                    st.altair_chart(chart, use_container_width=True)
+                with col2:
+                    st.write("**Summary:**")
+                    for k, v in failures.items():
+                        st.write(f"- {k.replace('_', ' ').title()}: {v}")
+            else:
+                st.info("No validation failures recorded.")
 
-            # 8. m/z Range Checker
-            st.subheader("m/z Range Checker")
-            if "mz_ranges" in stats:
-                col1, col2 = st.columns(2)
-                col1.metric("Global Min m/z", f"{stats['mz_ranges']['min']:.4f}")
-                col2.metric("Global Max m/z", f"{stats['mz_ranges']['max']:.4f}")
-
-        else:
-            st.info("Select a shard to view semantic quality metrics.")
-
-    with tabs[3]:
-        st.header("Pipeline Health")
-        
-        # 9. Throughput
-        st.subheader("Throughput")
-        throughput = metrics.get("samples_per_second", 0)
-        elapsed = metrics.get("elapsed_seconds", 0)
-        
-        col1, col2 = st.columns(2)
-        col1.metric("Throughput (Spectra/sec)", f"{throughput:.2f}")
-        col2.metric("Total Runtime (s)", f"{elapsed:.2f}")
-        
-        if throughput < 100 and throughput > 0:
-            st.warning("Throughput seems low (< 100 spectra/sec). Check IO or CPU.")
-
-        # 10. CPU/Memory Utilization (Placeholder as we don't have timeseries logs yet)
-        st.subheader("Resource Utilization")
-        st.info("Real-time CPU and Memory telemetry is not currently persisted to `resource_timeseries.json`. Please enable detailed logging in `nexa_infra` to view historical utilization.")
-        
-        # 11. Shard Finalization Timings
-        st.subheader("Shard Processing")
-        st.metric("Shards Written", metrics.get("shards_written", 0))
-        st.metric("Samples Written", metrics.get("samples_written", 0))
-
-    with tabs[4]:
-        st.header("Shards Inspector")
-
-        if selected_shard_path:
-            manifest_path = selected_shard_path.with_suffix(".manifest.json")
-            if manifest_path.exists():
-                with open(manifest_path) as f:
-                    shard_manifest = json.load(f)
-
-                st.subheader(f"Shard: {selected_shard_path.name}")
+        with data_tabs[2]:
+            st.subheader("Data Statistics")
+            
+            if selected_shard_path:
+                stats = get_shard_statistics(selected_shard_path)
                 
-                # Basic metrics
+                # Peak Statistics
+                st.subheader("Peak Statistics")
+                if "peak_counts" in stats and "all" in stats["peak_counts"]:
+                    col1, col2 = st.columns([2, 1])
+                    with col1:
+                        peak_data = pd.DataFrame({"peaks": stats["peak_counts"]["all"]})
+                        peak_chart = (
+                            alt.Chart(peak_data)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("peaks:Q", bin=alt.Bin(maxbins=50), title="Number of Peaks"),
+                                y=alt.Y("count()", title="Frequency")
+                            )
+                            .properties(height=300)
+                        )
+                        st.altair_chart(peak_chart, use_container_width=True)
+                    with col2:
+                        st.metric("Mean", f"{stats['peak_counts']['mean']:.1f}")
+                        st.metric("Median", f"{stats['peak_counts']['median']:.1f}")
+                        st.metric("Min", f"{stats['peak_counts']['min']}")
+                        st.metric("Max", f"{stats['peak_counts']['max']}")
+                
+                # Precursor m/z Distribution
+                st.subheader("Precursor m/z Distribution")
+                if "precursor_mz" in stats and "all" in stats["precursor_mz"]:
+                    col1, col2 = st.columns([2, 1])
+                    with col1:
+                        prec_data = pd.DataFrame({"mz": stats["precursor_mz"]["all"]})
+                        prec_chart = (
+                            alt.Chart(prec_data)
+                            .mark_bar()
+                            .encode(
+                                x=alt.X("mz:Q", bin=alt.Bin(maxbins=50), title="Precursor m/z"),
+                                y=alt.Y("count()", title="Frequency")
+                            )
+                            .properties(height=300)
+                        )
+                        st.altair_chart(prec_chart, use_container_width=True)
+                    with col2:
+                        st.metric("Mean", f"{stats['precursor_mz']['mean']:.2f}")
+                        st.metric("Min", f"{stats['precursor_mz']['min']:.2f}")
+                        st.metric("Max", f"{stats['precursor_mz']['max']:.2f}")
+
+                # Intensity & Distributions
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.subheader("Intensity Quantiles")
+                    if "intensity_quantiles" in stats:
+                        q_data = pd.DataFrame([
+                            {"Quantile": k, "Value": f"{v:.2e}"} for k, v in stats["intensity_quantiles"].items()
+                        ])
+                        st.dataframe(q_data.set_index("Quantile").T, use_container_width=True)
+                
+                with col2:
+                    st.subheader("m/z Range")
+                    if "mz_ranges" in stats:
+                        st.metric("Min m/z", f"{stats['mz_ranges']['min']:.4f}")
+                        st.metric("Max m/z", f"{stats['mz_ranges']['max']:.4f}")
+
+                # Charge & Adduct Distributions
+                st.subheader("Charge & Adduct Distributions")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if "charge_distribution" in stats:
+                        charge_df = pd.DataFrame([
+                            {"Charge": str(k), "Count": v} for k, v in stats["charge_distribution"].items()
+                        ])
+                        charge_chart = (
+                            alt.Chart(charge_df)
+                            .mark_arc(innerRadius=50)
+                            .encode(
+                                theta="Count",
+                                color="Charge:N",
+                                tooltip=["Charge", "Count"]
+                            )
+                            .properties(height=300)
+                        )
+                        st.altair_chart(charge_chart, use_container_width=True)
+                
+                with col2:
+                    if "adduct_distribution" in stats:
+                        adduct_df = pd.DataFrame([
+                            {"Adduct": k, "Count": v} for k, v in stats["adduct_distribution"].items()
+                        ])
+                        adduct_chart = (
+                            alt.Chart(adduct_df)
+                            .mark_bar()
+                            .encode(
+                                y=alt.Y("Adduct", sort="-x", title=""),
+                                x=alt.X("Count", title="Count"),
+                                color=alt.Color("Adduct", legend=None)
+                            )
+                            .properties(height=300)
+                        )
+                        st.altair_chart(adduct_chart, use_container_width=True)
+            else:
+                st.info("Select a shard in the sidebar to view data statistics.")
+
+        with data_tabs[3]:
+            st.subheader("Shards & Samples")
+            
+            if selected_shard_path:
+                manifest_path = selected_shard_path.with_suffix(".manifest.json")
+                if manifest_path.exists():
+                    with open(manifest_path) as f:
+                        shard_manifest = json.load(f)
+
+                    st.subheader(f"Shard: {selected_shard_path.name}")
+                
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Number of Samples", shard_manifest.get("num_samples", 0))
+                    st.metric("Samples", shard_manifest.get("num_samples", 0))
                 with col2:
-                    st.metric("File Size", f"{shard_manifest.get('file_size_bytes', 0):,} bytes")
+                    file_size_mb = shard_manifest.get("file_size_bytes", 0) / (1024 * 1024)
+                    st.metric("Size", f"{file_size_mb:.2f} MB")
                 with col3:
                     st.metric("Schema Version", shard_manifest.get("schema_version", "N/A"))
                 with col4:
                     checksum = shard_manifest.get("checksum", "N/A")
-                    st.metric("Checksum", checksum[:16] + "..." if len(checksum) > 16 else checksum)
+                    st.metric("Checksum", checksum[:12] + "..." if len(checksum) > 12 else checksum)
                 
-                with st.expander("View Shard Manifest JSON"):
-                    st.json(shard_manifest)
+                    with st.expander("View Shard Manifest"):
+                        st.json(shard_manifest)
 
-    with tabs[5]:
-        st.header("Samples Inspector")
+                # Sample Inspector
+                st.subheader("Sample Inspector")
+                df = load_shard(selected_shard_path)
+                st.write(f"**Total samples:** {len(df)}")
 
-        if selected_shard_path:
-            df = load_shard(selected_shard_path)
+                sample_id_search = st.text_input("🔍 Search by sample_id", key="sample_search")
+                if sample_id_search:
+                    df = df[df["sample_id"].str.contains(sample_id_search, case=False, na=False)]
 
-            st.subheader(f"Shard: {selected_shard_path.name}")
-            st.write(f"Total samples: {len(df)}")
+                if len(df) > 0:
+                    selected_sample = st.selectbox(
+                        "Select sample",
+                        df["sample_id"].tolist(),
+                        index=0,
+                    )
 
-            sample_id_search = st.text_input("Search by sample_id")
-            if sample_id_search:
-                df = df[df["sample_id"].str.contains(sample_id_search, case=False, na=False)]
+                    sample_row = df[df["sample_id"] == selected_sample].iloc[0]
 
-            if len(df) > 0:
-                selected_sample = st.selectbox(
-                    "Select sample",
-                    df["sample_id"].tolist(),
-                    index=0,
-                )
+                    col1, col2 = st.columns(2)
 
-                sample_row = df[df["sample_id"] == selected_sample].iloc[0]
+                    with col1:
+                        st.write("**Metadata:**")
+                        st.write(f"- Sample ID: `{sample_row['sample_id']}`")
+                        st.write(f"- Precursor m/z: {sample_row['precursor_mz']:.4f}")
+                        st.write(f"- Charge: {sample_row['charge']}")
+                        st.write(f"- Collision Energy: {sample_row['collision_energy']:.2f}")
+                        st.write(f"- Adduct: {sample_row.get('adduct', 'N/A')}")
+                        st.write(f"- Instrument: {sample_row.get('instrument_type', 'N/A')}")
 
-                col1, col2 = st.columns(2)
+                    with col2:
+                        st.write("**Molecular Information:**")
+                        if pd.notna(sample_row.get("smiles")):
+                            st.write(f"- SMILES: `{sample_row['smiles']}`")
+                        if pd.notna(sample_row.get("inchikey")):
+                            st.write(f"- InChIKey: `{sample_row['inchikey']}`")
+                        if pd.notna(sample_row.get("formula")):
+                            st.write(f"- Formula: `{sample_row['formula']}`")
 
+                    mzs = sample_row["mzs"]
+                    ints = sample_row["ints"]
+
+                    if isinstance(mzs, list):
+                        mzs = np.array(mzs)
+                    if isinstance(ints, list):
+                        ints = np.array(ints)
+
+                    st.subheader("Spectrum Visualization")
+                    chart = plot_spectrum(mzs.tolist(), ints.tolist(), f"Spectrum: {selected_sample}")
+                    st.altair_chart(chart, use_container_width=True)
+                else:
+                    st.info("No samples found. Try a different search term.")
+            else:
+                st.info("Select a shard in the sidebar to view shard details and samples.")
+
+    # ========== MS/MS EVALUATION SECTION ==========
+    with main_tabs[1]:
+        st.header("🎯 MS/MS Evaluation")
+        st.markdown("Evaluate model performance with ML metrics, domain-specific metrics, and competitive analysis")
+        
+        eval_tabs = st.tabs([
+            "ML Metrics",
+            "Domain Metrics",
+            "Competitive Analysis",
+            "Adoption Tiers"
+        ])
+        
+        with eval_tabs[0]:
+            st.subheader("ML Evaluation Metrics")
+            
+            if not eval_results:
+                st.info("No evaluation results found. Run model evaluation to see ML metrics.")
+                st.write("**Expected locations:**")
+                st.write(f"- `{EVAL_RESULTS_ROOT}/<dataset>/`")
+                st.write(f"- `{RESULTS_ROOT}/<dataset>/`")
+                st.write(f"- `{SHARDS_ROOT}/<dataset>/eval/`")
+            else:
+                # Model/Checkpoint selection
+                if len(eval_results) > 1:
+                    selected_eval = st.selectbox("Select Evaluation Run", list(eval_results.keys()))
+                    eval_data = eval_results[selected_eval]
+                else:
+                    eval_data = list(eval_results.values())[0]
+            
+            # Evaluation Run Info
+            if isinstance(eval_data, dict):
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.write("**Metadata:**")
-                    st.write(f"Sample ID: {sample_row['sample_id']}")
-                    st.write(f"Precursor m/z: {sample_row['precursor_mz']:.4f}")
-                    st.write(f"Charge: {sample_row['charge']}")
-                    st.write(f"Collision Energy: {sample_row['collision_energy']:.2f}")
-                    st.write(f"Adduct: {sample_row.get('adduct', 'N/A')}")
-                    st.write(f"Instrument: {sample_row.get('instrument_type', 'N/A')}")
-
+                    st.metric("Model", eval_data.get("model_id", "N/A"))
                 with col2:
-                    if pd.notna(sample_row.get("smiles")):
-                        st.write("**SMILES:**", sample_row["smiles"])
-                    if pd.notna(sample_row.get("inchikey")):
-                        st.write("**InChIKey:**", sample_row["inchikey"])
-                    if pd.notna(sample_row.get("formula")):
-                        st.write("**Formula:**", sample_row["formula"])
+                    st.metric("Checkpoint", eval_data.get("checkpoint", "N/A"))
+                with col3:
+                    st.metric("Dataset", eval_data.get("dataset", "N/A"))
+                with col4:
+                    timestamp = eval_data.get("timestamp", "N/A")
+                    if timestamp != "N/A":
+                        st.metric("Timestamp", timestamp.split("T")[0])
+            
+            # Training Metrics
+            st.subheader("Training Metrics")
+            training_metrics = eval_data.get("training", {}) if isinstance(eval_data, dict) else {}
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Loss", f"{training_metrics.get('total_loss', 0):.4f}")
+            with col2:
+                st.metric("Perplexity", f"{training_metrics.get('perplexity', 0):.2f}")
+            with col3:
+                st.metric("Valid SMILES", f"{training_metrics.get('valid_smiles_pct', 0):.2%}")
+            with col4:
+                st.metric("Formula Consistent", f"{training_metrics.get('formula_consistent_pct', 0):.2%}")
+            
+            # Generation Metrics
+            st.subheader("Generation Metrics")
+            gen_metrics = eval_data.get("generation", {}) if isinstance(eval_data, dict) else {}
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                topk_data = []
+                for k in [1, 10]:
+                    key = f"top{k}_accuracy"
+                    value = gen_metrics.get(key, 0)
+                    topk_data.append({"k": f"Top-{k}", "Accuracy": value})
+                if topk_data:
+                    topk_df = pd.DataFrame(topk_data)
+                    chart = (
+                        alt.Chart(topk_df)
+                        .mark_bar()
+                        .encode(
+                            x="k:N",
+                            y=alt.Y("Accuracy:Q", scale=alt.Scale(domain=[0, 1])),
+                            color=alt.Color("k:N", legend=None, scale=alt.Scale(scheme="category10"))
+                        )
+                        .properties(height=300)
+                    )
+                    st.altair_chart(chart, use_container_width=True)
+            
+            with col2:
+                sim_data = []
+                for k in [1, 10]:
+                    tanimoto_key = f"tanimoto_at{k}"
+                    mces_key = f"mces_at{k}"
+                    tanimoto = gen_metrics.get(tanimoto_key, 0)
+                    mces = gen_metrics.get(mces_key, 0)
+                    sim_data.append({
+                        "k": f"Top-{k}",
+                        "Tanimoto": tanimoto,
+                        "MCES": mces
+                    })
+                if sim_data:
+                    sim_df = pd.DataFrame(sim_data)
+                    chart = (
+                        alt.Chart(sim_df.melt(id_vars=["k"], var_name="Metric", value_name="Value"))
+                        .mark_bar()
+                        .encode(
+                            x="k:N",
+                            y="Value:Q",
+                            color="Metric:N",
+                            column="Metric:N"
+                        )
+                        .properties(height=300)
+                    )
+                    st.altair_chart(chart, use_container_width=True)
+            
+            # Retrieval & Calibration
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Retrieval Metrics")
+                retrieval_metrics = eval_data.get("retrieval", {}) if isinstance(eval_data, dict) else {}
+                col1a, col1b, col1c, col1d = st.columns(4)
+                with col1a:
+                    st.metric("HitRate@1", f"{retrieval_metrics.get('hitrate_at1', 0):.2%}")
+                with col1b:
+                    st.metric("HitRate@5", f"{retrieval_metrics.get('hitrate_at5', 0):.2%}")
+                with col1c:
+                    st.metric("HitRate@20", f"{retrieval_metrics.get('hitrate_at20', 0):.2%}")
+                with col1d:
+                    st.metric("MRR", f"{retrieval_metrics.get('mrr', 0):.3f}")
+            
+            with col2:
+                st.subheader("Calibration")
+                calib_metrics = eval_data.get("calibration", {}) if isinstance(eval_data, dict) else {}
+                col2a, col2b = st.columns(2)
+                with col2a:
+                    st.metric("ECE (SMILES)", f"{calib_metrics.get('ece_smiles', 0):.4f}")
+                with col2b:
+                    st.metric("PICP@90", f"{calib_metrics.get('picp_90', 0):.2%}")
+            
+            # Generalization
+            st.subheader("Generalization")
+            gen_slices = eval_data.get("generalization", {}) if isinstance(eval_data, dict) else {}
+            if gen_slices:
+                slice_type = st.selectbox("Slice By", ["instrument_type", "collision_energy", "ionization_mode", "chemical_class"], key="gen_slice")
+                if slice_type in gen_slices:
+                    slice_data = gen_slices[slice_type]
+                    if isinstance(slice_data, dict):
+                        slice_df = pd.DataFrame([
+                            {"Category": k, "Top-1 Accuracy": v.get("top1_accuracy", 0), 
+                             "Tanimoto@1": v.get("tanimoto_at1", 0)}
+                            for k, v in slice_data.items()
+                        ])
+                        if not slice_df.empty:
+                            chart = (
+                                alt.Chart(slice_df.melt(id_vars=["Category"], var_name="Metric", value_name="Value"))
+                                .mark_bar()
+                                .encode(
+                                    x="Category:N",
+                                    y="Value:Q",
+                                    color="Metric:N",
+                                    column="Metric:N"
+                                )
+                                .properties(height=300)
+                            )
+                            st.altair_chart(chart, use_container_width=True)
 
-                mzs = sample_row["mzs"]
-                ints = sample_row["ints"]
+        with eval_tabs[1]:
+            st.subheader("Domain-Specific Evaluation")
+            
+            if not eval_results:
+                st.info("No evaluation results found. Run model evaluation to see domain-specific metrics.")
+                st.write("**Expected locations:**")
+                st.write(f"- `{EVAL_RESULTS_ROOT}/<dataset>/`")
+                st.write(f"- `{RESULTS_ROOT}/<dataset>/`")
+            else:
+                if len(eval_results) > 1:
+                    selected_eval = st.selectbox("Select Evaluation Run", list(eval_results.keys()), key="domain_eval")
+                    eval_data = eval_results[selected_eval]
+                else:
+                    eval_data = list(eval_results.values())[0]
+                
+                domain_metrics = eval_data.get("domain", {}) if isinstance(eval_data, dict) else {}
+                
+                # 2.1 Precursor Mass & Formula Consistency
+                st.subheader("Mass & Formula Consistency")
+                col1, col2, col3 = st.columns(3)
+                
+                mass_metrics = domain_metrics.get("mass_formula", {})
+                with col1:
+                    mass_error = mass_metrics.get("mass_error_ppm", 0)
+                    st.metric("Mass Error (ppm)", f"{mass_error:.2f}", 
+                             delta="✓" if abs(mass_error) < 5 else "✗")
+                with col2:
+                    formula_acc = mass_metrics.get("formula_accuracy", 0)
+                    st.metric("Formula Accuracy", f"{formula_acc:.2%}")
+                with col3:
+                    exact_match = mass_metrics.get("exact_formula_match", 0)
+                    st.metric("Exact Formula Match", f"{exact_match:.2%}")
+                
+                # 2.2 Fragmentation Explainability
+                st.subheader("Fragmentation Explainability")
+                frag_metrics = domain_metrics.get("fragmentation", {})
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    peaks_explained = frag_metrics.get("peaks_explained_pct", 0)
+                    st.metric("Peaks Explained %", f"{peaks_explained:.2%}")
+                with col2:
+                    intensity_explained = frag_metrics.get("intensity_explained_pct", 0)
+                    st.metric("Intensity Explained %", f"{intensity_explained:.2%}")
+                with col3:
+                    unexplained_high = frag_metrics.get("unexplained_high_intensity_peaks", 0)
+                    st.metric("Unexplained High-Intensity Peaks", f"{unexplained_high:.1f}")
+                
+                # 2.3 Adduct & Ion Mode Validity
+                st.subheader("Adduct & Ion Mode Validity")
+                adduct_metrics = domain_metrics.get("adduct", {})
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    adduct_compatible = adduct_metrics.get("adduct_compatible_pct", 0)
+                    st.metric("Adduct-Compatible Predictions", f"{adduct_compatible:.2%}")
+                with col2:
+                    charge_violations = adduct_metrics.get("charge_violations_pct", 0)
+                    st.metric("Charge/Isotope Violations", f"{charge_violations:.2%}")
+                
+                # 2.4 Chemical Class and Scaffold Correctness
+                st.subheader("Chemical Class & Scaffold Correctness")
+                class_metrics = domain_metrics.get("chemical_class", {})
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    superclass_acc = class_metrics.get("superclass_accuracy", 0)
+                    st.metric("Superclass Accuracy", f"{superclass_acc:.2%}")
+                with col2:
+                    class_acc = class_metrics.get("class_accuracy", 0)
+                    st.metric("Class Accuracy", f"{class_acc:.2%}")
+                with col3:
+                    scaffold_match = class_metrics.get("scaffold_match_rate", 0)
+                    st.metric("Scaffold Match Rate", f"{scaffold_match:.2%}")
+                with col4:
+                    fg_recall = class_metrics.get("functional_group_recall", 0)
+                    st.metric("Functional Group Recall", f"{fg_recall:.2%}")
+                
+                # 2.5 Candidate Reduction / Workflow Gains
+                st.subheader("Workflow Gains")
+                workflow_metrics = domain_metrics.get("workflow", {})
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    reduction_factor = workflow_metrics.get("candidate_reduction_factor", 0)
+                    st.metric("Candidate Reduction Factor", f"{reduction_factor:.1f}×")
+                with col2:
+                    annotation_rate = workflow_metrics.get("annotation_rate_improvement", 0)
+                    st.metric("Annotation Rate Improvement", f"{annotation_rate:.1f}×")
+                
+                # 2.6 Robustness Across Spectral Conditions
+                st.subheader("Robustness Across Conditions")
+                robustness = domain_metrics.get("robustness", {})
+                
+                if robustness:
+                    robustness_df = pd.DataFrame([
+                        {
+                            "Condition": k,
+                            "Peaks Explained": v.get("peaks_explained_pct", 0),
+                            "Intensity Explained": v.get("intensity_explained_pct", 0),
+                            "Class Accuracy": v.get("class_accuracy", 0)
+                        }
+                        for k, v in robustness.items()
+                    ])
+                    if not robustness_df.empty:
+                        chart = (
+                            alt.Chart(robustness_df.melt(id_vars=["Condition"], var_name="Metric", value_name="Value"))
+                            .mark_bar()
+                            .encode(
+                                x="Condition:N",
+                                y="Value:Q",
+                                color="Metric:N",
+                                column="Metric:N"
+                            )
+                            .properties(height=300)
+                        )
+                        st.altair_chart(chart, use_container_width=True)
 
-                if isinstance(mzs, list):
-                    mzs = np.array(mzs)
-                if isinstance(ints, list):
-                    ints = np.array(ints)
+        with eval_tabs[2]:
+            st.subheader("Competitive Analysis")
+            
+            competitive_models = {
+            "MSNovelist": {
+                "top1_accuracy": 0.07,  # Conservative estimate
+                "top1_tanimoto": None,
+                "mces_at1": None,
+                "notes": "Top-1 ~7–39% in constrained settings"
+            },
+            "Spec2Mol": {
+                "top1_accuracy": None,
+                "top1_tanimoto": None,
+                "mces_at1": None,
+                "notes": "Focused on similarity; MW/formula errors reported"
+            },
+            "Test-Time Tuned LM (NPLIB1)": {
+                "top1_accuracy": 0.168,
+                "top1_tanimoto": 0.62,
+                "mces_at1": 6.5,
+                "notes": "NPLIB1 dataset"
+            },
+            "Test-Time Tuned LM (MassSpecGym)": {
+                "top1_accuracy": 0.028,
+                "top1_tanimoto": 0.45,
+                "mces_at1": 11.9,
+                "notes": "MassSpecGym dataset"
+            },
+            "DIFFMS/MADGEN/MS-BART": {
+                "top1_accuracy": 0.02,  # Range 2–4%
+                "top1_tanimoto": None,
+                "mces_at1": None,
+                "notes": "Range of 2–4% Top-1"
+            },
+            "MIST/MS2Query/Spec2Vec": {
+                "top1_accuracy": None,
+                "hitrate_at1": 0.40,  # ~40–60%
+                "notes": "Embedding & retrieval models"
+            }
+            }
+            
+            if eval_results:
+                if len(eval_results) > 1:
+                    selected_eval = st.selectbox("Select Evaluation Run", list(eval_results.keys()), key="comp_eval")
+                    eval_data = eval_results[selected_eval]
+                else:
+                    eval_data = list(eval_results.values())[0]
+                
+                gen_metrics = eval_data.get("generation", {}) if isinstance(eval_data, dict) else {}
+                retrieval_metrics = eval_data.get("retrieval", {}) if isinstance(eval_data, dict) else {}
+                
+                # Add current model
+                current_model = {
+                    "Current Model": {
+                        "top1_accuracy": gen_metrics.get("top1_accuracy", 0),
+                        "top1_tanimoto": gen_metrics.get("tanimoto_at1", 0),
+                        "mces_at1": gen_metrics.get("mces_at1", 0),
+                        "hitrate_at1": retrieval_metrics.get("hitrate_at1", 0),
+                        "notes": "Your model"
+                    }
+                }
+                competitive_models.update(current_model)
+            
+            # Create comparison dataframe
+            comp_data = []
+            for model_name, metrics in competitive_models.items():
+                comp_data.append({
+                    "Model": model_name,
+                    "Top-1 Accuracy": metrics.get("top1_accuracy", None),
+                    "Tanimoto@1": metrics.get("top1_tanimoto", None),
+                    "MCES@1": metrics.get("mces_at1", None),
+                    "HitRate@1": metrics.get("hitrate_at1", None),
+                    "Notes": metrics.get("notes", "")
+                })
+            
+            comp_df = pd.DataFrame(comp_data)
+            st.dataframe(comp_df, use_container_width=True)
+            
+            # Visualization
+            if eval_results:
+                chart_data = []
+                for model_name, metrics in competitive_models.items():
+                    if metrics.get("top1_accuracy") is not None:
+                        chart_data.append({
+                            "Model": model_name,
+                            "Top-1 Accuracy": metrics["top1_accuracy"]
+                        })
+                
+                if chart_data:
+                    chart_df = pd.DataFrame(chart_data)
+                    chart = (
+                        alt.Chart(chart_df)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X("Model:N", sort="-y"),
+                            y=alt.Y("Top-1 Accuracy:Q", scale=alt.Scale(domain=[0, 0.25])),
+                            color=alt.Color("Model:N", legend=None)
+                        )
+                        .properties(height=400)
+                    )
+                    st.altair_chart(chart, use_container_width=True)
 
-                st.subheader("Spectrum")
-                chart = plot_spectrum(mzs.tolist(), ints.tolist(), f"Spectrum: {selected_sample}")
-                st.altair_chart(chart, use_container_width=True)
+        with eval_tabs[3]:
+            st.subheader("Adoption Tiers")
+            
+            if not eval_results:
+                st.info("No evaluation results found. Run model evaluation to see adoption tier status.")
+                st.write("**Expected locations:**")
+                st.write(f"- `{EVAL_RESULTS_ROOT}/<dataset>/`")
+                st.write(f"- `{RESULTS_ROOT}/<dataset>/`")
+            else:
+                if len(eval_results) > 1:
+                    selected_eval = st.selectbox("Select Evaluation Run", list(eval_results.keys()), key="tier_eval")
+                    eval_data = eval_results[selected_eval]
+                else:
+                    eval_data = list(eval_results.values())[0]
+                
+                # Aggregate metrics
+                all_metrics = {}
+                if isinstance(eval_data, dict):
+                    gen_metrics = eval_data.get("generation", {})
+                    retrieval_metrics = eval_data.get("retrieval", {})
+                    domain_metrics = eval_data.get("domain", {})
+                    frag_metrics = domain_metrics.get("fragmentation", {})
+                    mass_metrics = domain_metrics.get("mass_formula", {})
+                    class_metrics = domain_metrics.get("chemical_class", {})
+                    workflow_metrics = domain_metrics.get("workflow", {})
+                    
+                    all_metrics = {
+                        "top1_accuracy": gen_metrics.get("top1_accuracy", 0),
+                        "top10_accuracy": gen_metrics.get("top10_accuracy", 0),
+                        "tanimoto_at1": gen_metrics.get("tanimoto_at1", 0),
+                        "mces_at1": gen_metrics.get("mces_at1", 0),
+                        "hitrate_at1": retrieval_metrics.get("hitrate_at1", 0),
+                        "hitrate_at20": retrieval_metrics.get("hitrate_at20", 0),
+                        "peaks_explained": frag_metrics.get("peaks_explained_pct", 0),
+                        "intensity_explained": frag_metrics.get("intensity_explained_pct", 0),
+                        "formula_match": mass_metrics.get("formula_accuracy", 0),
+                        "candidate_reduction": workflow_metrics.get("candidate_reduction_factor", 0),
+                        "class_accuracy": class_metrics.get("class_accuracy", 0),
+                    }
+                
+                current_tier, tier_info = get_adoption_tier(all_metrics)
+                
+                st.subheader("Current Tier Status")
+                tier_colors = {
+                    "Tier 3: Viral": "🟢",
+                    "Tier 2: Turning Point": "🟡",
+                    "Tier 1: Taken Seriously": "🟠",
+                    "Below Tier 1": "🔴"
+                }
+                st.markdown(f"### {tier_colors.get(current_tier, '⚪')} {current_tier}")
+                
+                # Tier thresholds display
+                st.subheader("Tier Thresholds")
+                
+                for tier_name in ["Tier 1", "Tier 2", "Tier 3"]:
+                    with st.expander(f"{tier_name} Thresholds"):
+                        thresholds = tier_info["thresholds"][tier_name]
+                        threshold_df = pd.DataFrame([
+                            {"Metric": k, "Threshold": v, 
+                             "Current": all_metrics.get(k.replace("_at1", "_at1").replace("_at20", "_at20"), None)}
+                            for k, v in thresholds.items()
+                        ])
+                        st.dataframe(threshold_df, use_container_width=True)
+                        
+                        # Show which thresholds are met
+                        met_count = tier_info["scores"][tier_name]
+                        total_count = len(thresholds)
+                        st.progress(met_count / total_count if total_count > 0 else 0)
+                        st.write(f"**{met_count}/{total_count} thresholds met**")
+                        
+                        if tier_info["details"][tier_name]:
+                            st.write("**Met thresholds:**")
+                            for detail in tier_info["details"][tier_name]:
+                                st.write(f"- {detail}")
+
 
 
 if __name__ == "__main__":
