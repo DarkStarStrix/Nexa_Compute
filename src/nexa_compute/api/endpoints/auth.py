@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List
-from pydantic import BaseModel
 from datetime import datetime
-from nexa_compute.api.database import get_db, ApiKeyDB, UserDB
-from nexa_compute.api.auth import get_api_key, generate_api_key
+from typing import Annotated, List
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from nexa_compute.api.auth import generate_api_key, rotate_api_key
+from nexa_compute.api.database import ApiKeyDB, UserDB, get_db
+from nexa_compute.api.middleware import get_rate_limited_user
 
 router = APIRouter()
 
@@ -22,15 +25,12 @@ class CreateApiKeyRequest(BaseModel):
 @router.post("/api-keys", response_model=ApiKeyResponse)
 def create_api_key(
     request: CreateApiKeyRequest,
-    user: UserDB = Depends(get_api_key),
-    db: Session = Depends(get_db)
+    user: Annotated[UserDB, Depends(get_rate_limited_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    raw_key, key_hash = generate_api_key()
-    prefix = raw_key[:10] + "..."
-    
-    import uuid
-    key_id = f"key_{uuid.uuid4().hex[:12]}"
-    
+    key_id, raw_key, key_hash = generate_api_key()
+    prefix = f"{raw_key[:10]}..."
+
     new_key = ApiKeyDB(
         key_id=key_id,
         key_hash=key_hash,
@@ -55,13 +55,17 @@ def create_api_key(
 
 @router.get("/api-keys", response_model=List[ApiKeyResponse])
 def list_api_keys(
-    user: UserDB = Depends(get_api_key),
-    db: Session = Depends(get_db)
+    user: Annotated[UserDB, Depends(get_rate_limited_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    keys = db.query(ApiKeyDB).filter(
-        ApiKeyDB.user_id == user.user_id,
-        ApiKeyDB.is_active == True
-    ).all()
+    keys = (
+        db.query(ApiKeyDB)
+        .filter(
+            ApiKeyDB.user_id == user.user_id,
+            ApiKeyDB.is_active.is_(True),
+        )
+        .all()
+    )
     
     return [
         ApiKeyResponse(
@@ -76,8 +80,8 @@ def list_api_keys(
 @router.delete("/api-keys/{key_id}")
 def revoke_api_key(
     key_id: str,
-    user: UserDB = Depends(get_api_key),
-    db: Session = Depends(get_db)
+    user: Annotated[UserDB, Depends(get_rate_limited_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     key = db.query(ApiKeyDB).filter(
         ApiKeyDB.key_id == key_id,
@@ -91,3 +95,23 @@ def revoke_api_key(
     db.commit()
     
     return {"status": "revoked"}
+
+
+class RotateApiKeyRequest(BaseModel):
+    name: str | None = None
+
+
+@router.post("/api-keys/rotate", response_model=ApiKeyResponse)
+def rotate_api_key_endpoint(
+    request: RotateApiKeyRequest,
+    user: Annotated[UserDB, Depends(get_rate_limited_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    raw_key, record = rotate_api_key(user, db, name=request.name)
+    return ApiKeyResponse(
+        key_id=record.key_id,
+        name=record.name,
+        prefix=record.key_prefix,
+        created_at=record.created_at,
+        raw_key=raw_key,
+    )

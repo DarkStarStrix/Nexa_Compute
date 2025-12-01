@@ -12,14 +12,24 @@ import torch.nn as nn
 
 from ..config import TrainingConfig, load_config, save_run_config
 from ..config.schema import TrainingConfig as TrainingSchema
-from ..data import DataPipeline, DatasetRegistry, DEFAULT_REGISTRY as DEFAULT_DATASET_REGISTRY
+from ..data import DEFAULT_REGISTRY as DEFAULT_DATASET_REGISTRY
+from ..data import DataPipeline, DatasetRegistry
 from ..evaluation import Evaluator
-from ..models import ModelRegistry, DEFAULT_MODEL_REGISTRY
-from ..training import Callback, CheckpointSaver, EarlyStopping, LoggingCallback, MLflowCallback, Trainer, launch_distributed
+from ..models import DEFAULT_MODEL_REGISTRY, ModelRegistry
+from ..training import (
+    Callback,
+    CheckpointSaver,
+    EarlyStopping,
+    LoggingCallback,
+    MLflowCallback,
+    Trainer,
+    launch_distributed,
+)
 from ..training.distributed import DistributedContext
 from ..utils import configure_logging
-from ..utils.checkpoint import checkpoint_path
+from ..utils.checkpoint import checkpoint_path, load_checkpoint
 from ..utils.logging import get_logger
+from ..utils.tracing import configure_tracing, trace_span
 
 LOGGER = get_logger(__name__)
 
@@ -48,6 +58,9 @@ class TrainingPipeline:
             log_dir=config.training.logging.log_dir,
             json_logs=True,
         )
+        # Configure tracing for the pipeline execution
+        configure_tracing(service_name="nexa-training")
+
         self.callbacks = list(callbacks or [])
         self._mlflow_run_active = False
         self._mlflow_run_id: Optional[str] = None
@@ -66,18 +79,43 @@ class TrainingPipeline:
         config = load_config(path, overrides=overrides)
         return cls(config, dataset_registry=dataset_registry, model_registry=model_registry, callbacks=callbacks)
 
-    def run(self, *, enable_evaluation: bool = True) -> PipelineArtifacts:
+    @trace_span("training_pipeline.run", attributes={"distributed": False})
+    def run(
+        self,
+        *,
+        enable_evaluation: bool = True,
+        resume_from_checkpoint: bool | str | Path | None = None,
+    ) -> PipelineArtifacts:
         run_dir = self.config.output_directory()
         run_dir.mkdir(parents=True, exist_ok=True)
         save_run_config(self.config, run_dir)
         LOGGER.info("run_started", extra={"extra_context": {"run_dir": str(run_dir)}})
 
+        resume_path = self._resolve_resume_checkpoint(resume_from_checkpoint, run_dir)
+        if resume_path:
+            LOGGER.info("resume_checkpoint", extra={"extra_context": {"path": str(resume_path)}})
+
         if self._is_distributed():
-            return self._run_distributed(run_dir, enable_evaluation=enable_evaluation)
+            return self._run_distributed(
+                run_dir,
+                enable_evaluation=enable_evaluation,
+                resume_checkpoint=resume_path,
+            )
 
-        return self._run_single_process(run_dir, enable_evaluation=enable_evaluation)
+        return self._run_single_process(
+            run_dir,
+            enable_evaluation=enable_evaluation,
+            resume_checkpoint=resume_path,
+        )
 
-    def _run_single_process(self, run_dir: Path, *, enable_evaluation: bool) -> PipelineArtifacts:
+    @trace_span("training_pipeline.single_process")
+    def _run_single_process(
+        self,
+        run_dir: Path,
+        *,
+        enable_evaluation: bool,
+        resume_checkpoint: Optional[Path],
+    ) -> PipelineArtifacts:
         data_pipeline = DataPipeline(self.config.data, registry=self.dataset_registry)
         data_pipeline.materialize_metadata(run_dir)
         train_loader = data_pipeline.dataloader("train")
@@ -87,6 +125,10 @@ class TrainingPipeline:
         mlflow_active = self._start_mlflow_run(run_dir)
         callbacks = self._build_callbacks(global_rank=0, mlflow_active=mlflow_active)
         trainer = Trainer(self.config, callbacks=callbacks)
+        if resume_checkpoint:
+            payload = self._load_checkpoint_payload(resume_checkpoint)
+            if payload:
+                trainer.resume_from_checkpoint(model, payload)
         trainer.fit(model, train_loader, val_loader)
         self._write_trainer_state(run_dir, trainer.state)
 
@@ -103,7 +145,14 @@ class TrainingPipeline:
             self._end_mlflow_run()
         return PipelineArtifacts(run_dir=run_dir, checkpoint=checkpoint, metrics=metrics)
 
-    def _run_distributed(self, run_dir: Path, *, enable_evaluation: bool) -> PipelineArtifacts:
+    @trace_span("training_pipeline.distributed")
+    def _run_distributed(
+        self,
+        run_dir: Path,
+        *,
+        enable_evaluation: bool,
+        resume_checkpoint: Optional[Path],
+    ) -> PipelineArtifacts:
         mlflow_payload = self._mlflow_settings() if self._mlflow_enabled else None
         launch_distributed(
             self.config.training.distributed,
@@ -112,6 +161,7 @@ class TrainingPipeline:
             str(run_dir),
             enable_evaluation,
             mlflow_payload,
+            str(resume_checkpoint) if resume_checkpoint else "",
         )
         metrics = self._load_metrics(run_dir)
         checkpoint = self._latest_checkpoint()
@@ -125,6 +175,7 @@ class TrainingPipeline:
         run_dir_str: str,
         enable_evaluation: bool,
         mlflow_payload: Optional[Dict[str, Any]],
+        resume_checkpoint_path: str,
     ) -> None:
         config = TrainingConfig.model_validate_json(config_json)
         run_dir = Path(run_dir_str)
@@ -154,6 +205,11 @@ class TrainingPipeline:
 
         callbacks = self._build_callbacks(global_rank=context.rank, mlflow_active=mlflow_active)
         trainer = Trainer(config, callbacks=callbacks, distributed_context=context)
+        resume_checkpoint = Path(resume_checkpoint_path) if resume_checkpoint_path else None
+        if resume_checkpoint:
+            payload = self._load_checkpoint_payload(resume_checkpoint)
+            if payload:
+                trainer.resume_from_checkpoint(model, payload)
         trainer.fit(model, train_loader, val_loader)
 
         if context.rank == 0:
@@ -276,6 +332,38 @@ class TrainingPipeline:
         with (run_dir / "trainer_state.json").open("w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2)
 
+    def _resolve_resume_checkpoint(
+        self,
+        resume_flag: bool | str | Path | None,
+        run_dir: Path,
+    ) -> Optional[Path]:
+        if not resume_flag:
+            return None
+        path: Optional[Path]
+        if resume_flag is True:
+            path = self._latest_checkpoint()
+        else:
+            candidate = Path(resume_flag)
+            if not candidate.is_absolute():
+                candidate = (run_dir / candidate).resolve()
+            path = candidate
+        if path and not path.exists():
+            LOGGER.warning("resume_checkpoint_missing", extra={"extra_context": {"path": str(path)}})
+            return None
+        return path
+
+    def _load_checkpoint_payload(self, checkpoint_path: Path) -> Optional[Dict[str, Any]]:
+        try:
+            return load_checkpoint(checkpoint_path)
+        except FileNotFoundError:
+            LOGGER.warning("resume_checkpoint_missing", extra={"extra_context": {"path": str(checkpoint_path)}})
+        except Exception as exc:  # pragma: no cover - defensive
+            LOGGER.error(
+                "resume_checkpoint_failed",
+                extra={"extra_context": {"path": str(checkpoint_path), "error": repr(exc)}},
+            )
+        return None
+
     def _flatten_config(self, config_dict: Dict[str, Any], prefix: str = "") -> Dict[str, Any]:
         flattened: Dict[str, Any] = {}
         for key, value in config_dict.items():
@@ -299,9 +387,6 @@ class TrainingPipeline:
 
     @staticmethod
     def _mlflow_available() -> bool:
-        try:
-            import mlflow  # type: ignore
+        import importlib.util
 
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("mlflow") is not None

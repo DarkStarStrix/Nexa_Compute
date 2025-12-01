@@ -1,17 +1,19 @@
 """Shard writer with checksums and metrics."""
 
+import errno
 import hashlib
 import json
 import os
 import shutil
-from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import BaseException, Dict, List, Optional, Set
 
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-import numpy as np
+
+from nexa_compute.utils import RetryError, RetryPolicy, retry_call
 
 from .metrics import PipelineMetrics
 
@@ -23,6 +25,23 @@ def sha256_of_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+_PARQUET_WRITE_POLICY = RetryPolicy(
+    max_attempts=4,
+    base_delay=0.5,
+    max_delay=4.0,
+    jitter=0.3,
+    retry_exceptions=(pa.ArrowException, OSError, IOError),
+)
+
+_RENAME_POLICY = RetryPolicy(
+    max_attempts=5,
+    base_delay=0.25,
+    max_delay=2.0,
+    jitter=0.3,
+    retry_exceptions=(OSError, IOError),
+)
 
 
 class ShardWriter:
@@ -108,7 +127,7 @@ class ShardWriter:
             
             # Atomic rename
             if self.current_temp_path and self.current_temp_path.exists():
-                self.current_temp_path.rename(self.current_path)
+                self._rename_with_retry(self.current_temp_path, self.current_path)
                 
                 # Compute checksum and manifest
                 checksum = sha256_of_file(self.current_path)
@@ -187,16 +206,6 @@ class ShardWriter:
         for record in records:
             sample_id = record["sample_id"]
             if sample_id in self.seen_sample_ids:
-                # In rebalance mode, if delete_originals=True, we are effectively moving.
-                # Duplicate ID means actual data duplication.
-                # We should SKIP duplicates to clean the dataset.
-                # Logging as warning instead of raising error.
-                try:
-                    from tqdm import tqdm
-                    #tqdm.write(f"[WARN] Skipping duplicate sample_id: {sample_id}")
-                    pass
-                except ImportError:
-                    pass
                 continue
             
             self.seen_sample_ids.add(sample_id)
@@ -213,13 +222,13 @@ class ShardWriter:
         try:
             table = pa.Table.from_pylist(unique_records)
         except Exception as e:
-            raise ValueError(f"Failed to convert records to Arrow table: {e}")
+            raise ValueError(f"Failed to convert records to Arrow table: {e}") from e
 
         # Initialize writer if needed
         if self.writer is None:
             self._init_writer(table.schema)
         
-        self.writer.write_table(table)
+        self._write_table_with_retry(table)
         
         # Update stats
         self.current_shard_rows_count += len(unique_records)
@@ -266,3 +275,64 @@ class ShardWriter:
         """Close writer and finalize current shard."""
         if self.writer:
             self._close_current_shard()
+
+    def _write_table_with_retry(self, table: pa.Table) -> None:
+        """Write a table to disk with retry/backoff."""
+
+        def _write() -> None:
+            if self.writer is None:
+                raise RuntimeError("Parquet writer has not been initialized.")
+            self.writer.write_table(table)
+
+        try:
+            retry_call(
+                _write,
+                policy=_PARQUET_WRITE_POLICY,
+                on_retry=lambda attempt, exc, delay: self._log_retry(
+                    "write_table", attempt, delay, exc
+                ),
+            )
+        except RetryError as exc:
+            self._handle_write_failure(exc)
+
+    def _rename_with_retry(self, tmp_path: Path, final_path: Path) -> None:
+        """Rename tmp shard into final location with retry support."""
+
+        def _rename() -> None:
+            tmp_path.replace(final_path)
+
+        try:
+            retry_call(
+                _rename,
+                policy=_RENAME_POLICY,
+                on_retry=lambda attempt, exc, delay: self._log_retry(
+                    "rename_shard", attempt, delay, exc
+                ),
+            )
+        except RetryError as exc:
+            self._handle_write_failure(exc)
+
+    def _log_retry(self, operation: str, attempt: int, delay: float, exc: BaseException) -> None:
+        """Emit a retry warning using tqdm when available."""
+        message = (
+            f"[RETRY] {operation} attempt {attempt} failed ({exc!r}). "
+            f"Retrying in {delay:.2f}s."
+        )
+        try:
+            from tqdm import tqdm
+
+            tqdm.write(message)
+        except ImportError:
+            print(message)
+
+    def _handle_write_failure(self, exc: RetryError) -> None:
+        """Quarantine shard and surface meaningful error message."""
+        shard_name = self.current_path.name if self.current_path else f"shard_{self.shard_index:05d}"
+        if isinstance(exc.last_exception, OSError) and exc.last_exception.errno == errno.ENOSPC:
+            error_msg = (
+                f"Disk full while writing shard {shard_name}: {exc.last_exception}"
+            )
+        else:
+            error_msg = str(exc.last_exception)
+        self._quarantine_shard(shard_name, error_msg)
+        raise RuntimeError(f"Failed to finalize shard {shard_name}") from exc.last_exception

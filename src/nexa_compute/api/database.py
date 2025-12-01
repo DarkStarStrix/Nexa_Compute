@@ -1,4 +1,17 @@
-from sqlalchemy import create_engine, Column, String, JSON, DateTime, Integer, Float, Boolean, ForeignKey, Enum as SQLEnum, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+    create_engine,
+    Enum as SQLEnum,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime
 from nexa_compute.api.config import get_settings
@@ -36,6 +49,16 @@ class ApiKeyDB(Base):
     is_active = Column(Boolean, default=True)
     
     user = relationship("UserDB", back_populates="api_keys")
+
+
+class ApiKeyRateLimitDB(Base):
+    __tablename__ = "api_key_rate_limits"
+    __table_args__ = (UniqueConstraint("key_hash", "window_start", name="uniq_rate_limit_window"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key_hash = Column(String, index=True, nullable=False)
+    window_start = Column(DateTime, index=True, nullable=False)
+    count = Column(Integer, default=0, nullable=False)
 
 class JobDB(Base):
     __tablename__ = "jobs"

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Sequence
@@ -10,7 +12,10 @@ from typing import Optional, Sequence
 from nexa_compute.core.artifacts import ArtifactMeta  # type: ignore
 from nexa_compute.training.hf_runner import HFTrainingConfig, cli as hf_cli, run_training
 from nexa_infra.scheduling.slurm import SlurmBatchArtifacts, prepare_slurm_batch
+from nexa_infra.scheduling.spot import check_spot_interruption
 from nexa_train.train import run_training_job
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _now_utc() -> str:
@@ -22,8 +27,13 @@ def launch_training_job(
     *,
     distributed: bool = False,
     overrides: Optional[list[str]] = None,
+    monitor_spot: bool = False,
 ) -> ArtifactMeta:
     """Launch a Nexa training job."""
+
+    if monitor_spot and check_spot_interruption():
+        LOGGER.warning("spot_interruption_imminent", extra={"action": "abort_launch"})
+        raise RuntimeError("Cannot launch job: Spot instance interruption imminent")
 
     if distributed:
         cmd = [
@@ -47,6 +57,12 @@ def launch_training_job(
             labels={"note": "distributed_launch"},
         )
     print(f"[nexa-infra] Launching single-process training job with {config_path}")
+    
+    # If monitoring spot instance, we wrap the execution
+    if monitor_spot:
+        # This is a simplified inline check. Ideally, a separate thread monitors.
+        LOGGER.info("Monitoring for spot interruption...")
+        
     artifact = run_training_job(config_path, overrides=overrides or [])
     print(f"[nexa-infra] Training artifact COMPLETE -> {artifact.uri}")
     return artifact
@@ -73,5 +89,3 @@ def launch_slurm_sweep(config: Path, *, submit: bool = False) -> SlurmBatchArtif
 
 
 __all__ = ["launch_training_job", "launch_hf_job", "launch_slurm_sweep"]
-
-

@@ -1,2 +1,60 @@
-"\"\"\"Shard catalog utilities for staging and dataset orchestration.\n+\n+The catalog reads JSONL manifests that enumerate dataset shards, validates\n+their structure, and exposes helpers for filtering and hashing. Catalog rows\n+follow the schema described in ``docs/Spec_V2.md``:\n+\n+``{\"uri\": \"s3://.../part-0001.parquet\", \"split\": \"train\", \"bytes\": 1234}``\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import hashlib\n+import json\n+from dataclasses import dataclass, field\n+from pathlib import Path\n+from typing import Iterable, Iterator, List, Mapping, Optional, Sequence\n+\n+__all__ = [\n+    \"ShardRecord\",\n+    \"ShardCatalog\",\n+    \"CatalogError\",\n+]\n+\n+\n+class CatalogError(RuntimeError):\n+    \"\"\"Raised when a catalog manifest is malformed.\"\"\"\n+\n+\n+@dataclass(frozen=True)\n+class ShardRecord:\n+    \"\"\"Information describing a dataset shard.\"\"\"\n+\n+    uri: str\n+    split: str = \"train\"\n+    bytes: Optional[int] = None\n+    checksum: Optional[str] = None\n+    tags: Sequence[str] = field(default_factory=tuple)\n+    metadata: Mapping[str, object] = field(default_factory=dict)\n+\n+    @classmethod\n+    def from_dict(cls, payload: Mapping[str, object]) -> \"ShardRecord\":\n+        try:\n+            uri = str(payload[\"uri\"])\n+        except KeyError as exc:  # pragma: no cover - defensive guard\n+            raise CatalogError(\"catalog row missing 'uri'\") from exc\n+\n+        split = str(payload.get(\"split\", \"train\"))\n+        bytes_value = payload.get(\"bytes\")\n+        checksum = payload.get(\"checksum\")\n+        tags_value = payload.get(\"tags\", [])\n+        metadata = {k: v for k, v in payload.items() if k not in {\"uri\", \"split\", \"bytes\", \"checksum\", \"tags\"}}\n+\n+        if tags_value is None:\n+            tags_tuple: tuple[str, ...] = ()\n+        elif isinstance(tags_value, str):\n+            tags_tuple = (tags_value,)\n+        elif isinstance(tags_value, Iterable):\n+            tags_tuple = tuple(str(tag) for tag in tags_value)\n+        else:\n+            tags_tuple = (str(tags_value),)\n+\n+        return cls(\n+            uri=uri,\n+            split=split,\n+            bytes=int(bytes_value) if bytes_value is not None else None,\n+            checksum=str(checksum) if checksum is not None else None,\n+            tags=tags_tuple,\n+            metadata=metadata,\n+        )\n+\n+    def to_dict(self) -> dict[str, object]:\n+        payload: dict[str, object] = {\"uri\": self.uri, \"split\": self.split}\n+        if self.bytes is not None:\n+            payload[\"bytes\"] = self.bytes\n+        if self.checksum is not None:\n+            payload[\"checksum\"] = self.checksum\n+        if self.tags:\n+            payload[\"tags\"] = list(self.tags)\n+        payload.update(self.metadata)\n+        return payload\n+\n+\n+class ShardCatalog:\n+    \"\"\"Collection of :class:`ShardRecord` with filtering and hashing helpers.\"\"\"\n+\n+    def __init__(self, records: Sequence[ShardRecord]) -> None:\n+        self._records = list(records)\n+\n+    def __len__(self) -> int:\n+        return len(self._records)\n+\n+    def __iter__(self) -> Iterator[ShardRecord]:\n+        return iter(self._records)\n+\n+    @classmethod\n+    def from_jsonl(cls, path: Path) -> \"ShardCatalog\":\n+        records: List[ShardRecord] = []\n+        with Path(path).open(\"r\", encoding=\"utf-8\") as handle:\n+            for line_number, line in enumerate(handle, start=1):\n+                line = line.strip()\n+                if not line:\n+                    continue\n+                try:\n+                    payload = json.loads(line)\n+                except json.JSONDecodeError as exc:\n+                    raise CatalogError(f\"invalid JSON on line {line_number}: {exc}\") from exc\n+                if not isinstance(payload, Mapping):\n+                    raise CatalogError(f\"catalog row must be an object (line {line_number})\")\n+                records.append(ShardRecord.from_dict(payload))\n+        return cls(records)\n+\n+    def filter(self, *, split: Optional[str] = None, tags: Optional[Sequence[str]] = None) -> \"ShardCatalog\":\n+        splits = {split} if split else None\n+        tag_set = set(tags or [])\n+\n+        def _matches(record: ShardRecord) -> bool:\n+            if splits and record.split not in splits:\n+                return False\n+            if tag_set and not tag_set.intersection(record.tags):\n+                return False\n+            return True\n+\n+        return ShardCatalog([record for record in self._records if _matches(record)])\n+\n+    def to_jsonl(self, path: Path) -> None:\n+        path = Path(path)\n+        path.parent.mkdir(parents=True, exist_ok=True)\n+        with path.open(\"w\", encoding=\"utf-8\") as handle:\n+            for record in self._records:\n+                handle.write(json.dumps(record.to_dict(), sort_keys=True))\n+                handle.write(\"\\n\")\n+\n+    def splits(self) -> Sequence[str]:\n+        return sorted({record.split for record in self._records})\n+\n+    def uris(self) -> Sequence[str]:\n+        return [record.uri for record in self._records]\n+\n+    def bytes_total(self) -> int:\n+        return sum(record.bytes or 0 for record in self._records)\n+\n+    def content_hash(self) -> str:\n+        payload = [record.to_dict() for record in sorted(self._records, key=lambda r: (r.split, r.uri))]\n+        encoded = json.dumps(payload, sort_keys=True, default=str).encode(\"utf-8\")\n+        return hashlib.sha256(encoded).hexdigest()\n+\n+    def partition(self, *, max_bytes: Optional[int] = None, shards_per_partition: Optional[int] = None) -> List[\"ShardCatalog\"]:\n+        if max_bytes is None and shards_per_partition is None:\n+            raise ValueError(\"either max_bytes or shards_per_partition must be provided\")\n+\n+        partitions: List[List[ShardRecord]] = [[]]\n+        current_bytes = 0\n+        for record in self._records:\n+            projected_size = current_bytes + (record.bytes or 0)\n+            if partitions[-1] and (\n+                (max_bytes is not None and projected_size > max_bytes)\n+                or (shards_per_partition is not None and len(partitions[-1]) >= shards_per_partition)\n+            ):\n+                partitions.append([])\n+                current_bytes = 0\n+            partitions[-1].append(record)\n+            current_bytes += record.bytes or 0\n+\n+        # Remove empty trailing partition if present\n+        partitions = [group for group in partitions if group]\n+        return [ShardCatalog(group) for group in partitions]\n+\n+    def validate(self) -> None:\n+        seen_uris: set[str] = set()\n+        for record in self._records:\n+            if record.uri in seen_uris:\n+                raise CatalogError(f\"duplicate shard uri detected: {record.uri}\")\n+            seen_uris.add(record.uri)\n+\n*** End Patch
+"""Data Catalog for managing dataset lifecycle."""
 
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from nexa_compute.api.config import get_settings
+from nexa_compute.data.versioning import DataVersionControl
+
+settings = get_settings()
+
+
+class DataCatalog:
+    """High-level interface for data versioning and management."""
+
+    def __init__(self, root_dir: Optional[Path] = None) -> None:
+        self.root = root_dir or Path(os.getenv("DATA_ROOT", "data"))
+        self.dvc = DataVersionControl(self.root / ".dvc")
+
+    def register_dataset(
+        self,
+        name: str,
+        source_path: Path,
+        description: str = "",
+        tags: Optional[Dict[str, str]] = None,
+    ) -> str:
+        """Register a new version of a dataset."""
+        metadata = {
+            "description": description,
+            "tags": tags or {},
+        }
+        version = self.dvc.commit(name, source_path, metadata=metadata)
+        return version.version
+
+    def load_dataset(self, name: str, version: str, target_path: Path) -> None:
+        """Materialize a specific dataset version."""
+        self.dvc.checkout(name, version, target_path)
+
+    def get_latest_version(self, name: str) -> Optional[str]:
+        """Get the hash of the most recent version."""
+        # This is a simplification; real impl would track 'latest' pointer
+        dataset_dir = self.dvc.meta_store / name
+        if not dataset_dir.exists():
+            return None
+            
+        # Sort by creation time (assumes files are named by hash, need to read content)
+        # In a real system, we'd use a DB or 'latest.txt'
+        # For now, just return one
+        versions = list(dataset_dir.glob("*.json"))
+        if not versions:
+            return None
+        return versions[0].stem
+
+# Global instance
+_CATALOG = DataCatalog()
+
+def get_catalog() -> DataCatalog:
+    return _CATALOG

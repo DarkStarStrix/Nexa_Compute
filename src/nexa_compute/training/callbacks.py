@@ -114,7 +114,18 @@ class CheckpointSaver(Callback):
         if improved:
             self.best_score = monitor_value
             path = checkpoint_path(self.config, epoch=state.epoch)
-            save_checkpoint({"model_state": model.state_dict(), "epoch": state.epoch}, path.parent, filename=path.name)
+            save_checkpoint(
+                {
+                    "model_state": model.state_dict(),
+                    "trainer_state": {
+                        "epoch": state.epoch,
+                        "global_step": state.global_step,
+                        "best_metric": state.best_metric,
+                    },
+                },
+                path.parent,
+                filename=path.name,
+            )
             LOGGER.info(
                 "checkpoint_saved",
                 extra={"extra_context": {"path": str(path), "monitor": self.config.monitor, "score": monitor_value}},

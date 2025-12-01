@@ -18,6 +18,8 @@ from nexa_inference import (
     StructureDecoder,
     create_snapshot,
 )
+from nexa_inference.server import InferenceServer
+
 
 
 class DummyClient:

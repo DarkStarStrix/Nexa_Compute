@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from nexa_compute.utils.secrets import get_secret_manager
+
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
@@ -22,9 +24,16 @@ class Settings(BaseSettings):
     STORAGE_BACKEND: str = "local"  # local, s3
     S3_BUCKET: Optional[str] = None
 
+    # Rate limiting
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+    RATE_LIMIT_REQUESTS_PER_WINDOW: int = 120
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
 
 
 @lru_cache()
 def get_settings():
-    return Settings()
+    settings = Settings()
+    # Ensure secrets manager is initialized and required secrets are validated.
+    get_secret_manager()
+    return settings

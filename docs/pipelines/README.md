@@ -1,140 +1,126 @@
 ---
-title: Pipeline Guide
+title: NexaCompute Pipelines
 slug: pipeline/guide
-description: Step-by-step instructions for executing the full NexaCompute pipeline.
+description: Central hub for NexaCompute pipeline documentation and execution guides.
 ---
 
-# NexaCompute Pipeline Execution Guide
+# NexaCompute Pipelines
 
-## Overview
+Welcome to the core documentation for NexaCompute's data, training, and inference pipelines. This guide serves as the central entry point for understanding how the platform's modular components interact to transform raw data into deployed intelligence.
 
-This guide explains how to run the complete NexaCompute pipeline for dataset generation and training using tmux sessions.
+## 🏗️ Architecture Overview
 
-## Pipeline Stages
+The platform is organized into **7 specialized pipelines**, each handling a distinct stage of the model lifecycle.
 
-1. **Data Generation** (`data_gen`): Generate teacher outputs for full dataset
-2. **Filtering** (`filtering`): Apply basic filters + SampleGate quality gates
-3. **Packaging** (`packaging`): Convert filtered data to SFT format
-4. **Training** (`training`): Train model on distilled dataset
+```mermaid
+graph TD
+    A[Data Ingestion] --> B[Distillation]
+    B --> C[Evaluation]
+    C --> D[Training]
+    D --> E[Inference]
+    E --> F[Tools & Agents]
+    
+    subgraph "Infrastructure"
+    I[Provisioning]
+    J[Scheduling]
+    K[Monitoring]
+    end
+    
+    subgraph "User Interface"
+    L[Dashboards]
+    M[Leaderboards]
+    end
+```
 
-## Quick Start
+## 📚 Pipeline Documentation
 
-### Launch All Jobs
+| Pipeline | Scope | Key Modules | Documentation |
+| :--- | :--- | :--- | :--- |
+| **[Data Engineering](./DATA.md)** | Ingestion, Validation, Synthetic Data | `nexa_data` | [Read Docs](./DATA.md) |
+| **[Distillation](./DISTILLATION.md)** | Teacher Generation, Knowledge Transfer | `nexa_distill` | [Read Docs](./DISTILLATION.md) |
+| **[Evaluation](./EVALUATION.md)** | LLM-as-a-Judge, Benchmarking | `nexa_eval` | [Read Docs](./EVALUATION.md) |
+| **[Training](./TRAINING.md)** | SFT, DPO, Pretraining, FSDP | `nexa_train` | [Read Docs](./TRAINING.md) |
+| **[Inference](./INFERENCE.md)** | Model Serving, Spectral Analysis | `nexa_inference` | [Read Docs](./INFERENCE.md) |
+| **[Tools](./TOOLS.md)** | Sandboxed Execution, Agent APIs | `nexa_tools` | [Read Docs](./TOOLS.md) |
+| **[Infrastructure](./INFRASTRUCTURE.md)** | Scheduling, Cost, Containerization | `nexa_infra` | [Read Docs](./INFRASTRUCTURE.md) |
+| **[User Interface](./UI.md)** | Dashboards, Inspection Tools | `nexa_ui` | [Read Docs](./UI.md) |
 
+---
+
+## 🚀 Execution Guide
+
+For end-to-end execution, we recommend using the orchestrated tmux workflow. This manages the dependencies between data generation, filtering, packaging, and training.
+
+### Quick Start
+
+**Launch the full pipeline:**
 ```bash
 bash scripts/shell/orchestration/launch_pipeline.sh
 ```
 
-This will create tmux sessions for each stage and start them automatically.
+This script initializes **4 tmux sessions**, ensuring that each stage waits for the previous one to complete (where applicable) or runs in parallel for maximum throughput.
 
-### Manual Execution
+### Manual Stage Execution
 
-If you prefer to run stages manually:
+If you need granular control, you can run individual stages manually:
 
-#### 1. Data Generation
+#### 1. Data Generation (`data_gen`)
+Generates reasoning traces from the Teacher model.
 ```bash
-tmux new -s data_gen
 python scripts/python/data_processing/run_full_data_gen.py
 ```
 
-#### 2. Filtering
+#### 2. Filtering (`filtering`)
+Applies heuristic filters and the "SampleGate" LLM judge to remove low-quality data.
 ```bash
-tmux new -s filtering
 python scripts/python/data_processing/run_filtering.py
 ```
 
-#### 3. Packaging
+#### 3. Packaging (`packaging`)
+Converts the filtered dataset into the standardized JSONL/Parquet format for SFT.
 ```bash
-tmux new -s packaging
 python scripts/python/deployment/run_packaging.py
 ```
 
-#### 4. Training
+#### 4. Training (`training`)
+Launches the training job (supports both single-node and distributed setups).
 ```bash
-tmux new -s training
 bash scripts/shell/training/run_training.sh nexa_train/configs/baseline_distill.yaml true
 ```
 
-## Tmux Session Management
+---
 
-### List Sessions
-```bash
-tmux list-sessions
-```
+## 📂 Data Flow & Artifacts
 
-### Attach to Session
-```bash
-tmux attach -t data_gen      # Data generation
-tmux attach -t filtering     # Filtering
-tmux attach -t packaging     # Packaging
-tmux attach -t training      # Training
-```
+The pipeline enforces a strict directory structure for reproducibility.
 
-### Detach from Session
-Press `Ctrl+B` then `D` (while inside tmux)
+| Stage | Input Path | Output Path |
+| :--- | :--- | :--- |
+| **Distillation** | `data/processed/distillation/teacher_inputs/` | `data/processed/distillation/teacher_outputs/` |
+| **Filtering** | `data/processed/distillation/teacher_outputs/` | `data/processed/distillation/filtered/` |
+| **Packaging** | `data/processed/distillation/filtered/` | `data/processed/training/sft_dataset.jsonl` |
+| **Training** | `data/processed/training/` | `artifacts/checkpoints/<run_id>/` |
+| **Evaluation** | `artifacts/checkpoints/<run_id>/` | `results/evaluation/reports/` |
 
-### Kill Session
-```bash
-tmux kill-session -t data_gen
-```
+## 🔧 Configuration
 
-## File Locations
+Each pipeline stage is controlled by YAML configuration files.
 
-### Inputs
-- Teacher inputs: `data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet`
-- System prompt: `data/system_prompt_template.txt`
+*   **Distillation**: `nexa_distill/configs/distill_config.yaml` (Model selection, prompting)
+*   **Filtering**: `nexa_distill/configs/filters.yaml` (Judge thresholds, heuristics)
+*   **Training**: `nexa_train/configs/` (Hyperparameters, hardware settings)
+*   **Infrastructure**: `nexa_infra/configs/` (Slurm partitions, docker images)
 
-### Outputs
-- Teacher outputs: `data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet`
-- Filtered data: `data/processed/distillation/filtered/filtered_v1.parquet`
-- Rejections: `data/processed/distillation/filtered/rejections.parquet`
-- SFT dataset: `data/processed/training/sft_dataset.jsonl`
+## 🛠️ Troubleshooting
 
-### Logs
-- Data generation: `logs/data_gen.log`
-- Filtering: `logs/filtering.log`
-- Packaging: `logs/packaging.log`
-- Training: `logs/training.log`
+### Session Management
+Use `tmux` to manage long-running jobs:
+*   `tmux list-sessions`: See active pipeline stages.
+*   `tmux attach -t <session_name>`: View live logs.
+*   `ctrl+b` then `d`: Detach without stopping the job.
 
-## Configuration
-
-### Distillation Config
-- Location: `nexa_distill/configs/distill_config.yaml`
-- Model: `gpt-4o-mini`
-- Batch size: 8
-
-### Filter Config
-- Location: `nexa_distill/configs/filters.yaml`
-- Min judge score: 0.80 (set in SampleGate)
-
-### Training Config
-- Location: `nexa_train/configs/baseline_distill.yaml`
-- Distributed: 2 GPUs
-- Mixed precision: Enabled
-
-## Environment Variables
-
-Ensure `.env` file contains:
-```bash
-OPENAI_API_KEY=sk-...
-```
-
-## Troubleshooting
-
-### Session Already Exists
-If a session already exists, the launch script will attach to it instead of creating a new one. Kill it first if needed:
-```bash
-tmux kill-session -t session_name
-```
-
-### Check Job Status
-```bash
-# Inside tmux session
-tail -f logs/data_gen.log
-```
-
-### Monitor GPU Usage (for training)
-```bash
-watch -n 1 nvidia-smi
-```
-
+### Logging
+All stages write structured logs to the `logs/` directory.
+*   **Generation**: `logs/data_gen.log`
+*   **Training**: `logs/training.log`
+*   **System**: `logs/system_monitor.log` (GPU/CPU usage)

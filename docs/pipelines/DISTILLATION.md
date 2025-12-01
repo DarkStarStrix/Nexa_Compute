@@ -1,180 +1,106 @@
 # NexaCompute Distillation Guide
 
-Complete guide for running knowledge distillation workflows in NexaCompute.
+> **Scope**: Knowledge Transfer, Teacher Generation, and Data Curation.
+> **Modules**: `nexa_distill`
 
-## Overview
-
-**Nexa Distill** transforms raw scientific text into high-quality, falsifiable, and reproducible hypothesis–method pairs for supervised fine-tuning. The engine modularizes teacher generation, filtering, inspection, regeneration, and packaging into final training datasets.
+**Nexa Distill** transforms raw scientific text into high-quality, falsifiable, and reproducible hypothesis–method pairs for supervised fine-tuning (SFT). The engine modularizes teacher generation, filtering, inspection, regeneration, and packaging into final training datasets.
 
 ## Architecture
 
+The pipeline is designed as a series of transformations on Parquet datasets:
+
 ```
-nexa_distill/
-├── collect_teacher.py        # Generate teacher completions
-├── filter_pairs.py            # Clean + filter teacher outputs
-├── ui_inspect.py              # Streamlit review interface
-├── regenerate_bad.py          # Re-run rejected samples
-├── to_sft.py                  # Package final dataset
-├── prompts/
-│   ├── hypothesis.txt
-│   ├── methodology.txt
-│   └── rubric.json
-├── utils/
-│   ├── io.py
-│   ├── openai_api.py
-│   ├── filters.py
-│   ├── texttools.py
-│   └── logger.py
-└── configs/
-    ├── distill_config.yaml
-    ├── teacher_models.yaml
-    └── filters.yaml
+Teacher Inputs -> [Collection] -> Raw Outputs -> [Filtering] -> Clean Outputs -> [Packaging] -> SFT Dataset
+                                      ^               |
+                                      |               v
+                                [Regeneration] <--- [Inspection]
 ```
 
-## Complete Pipeline
+## Pipeline Components
 
-### Stage 1: Prepare Teacher Inputs
+### 1. Teacher Collection (`nexa_distill/collect_teacher.py`)
+Generates synthetic reasoning traces using a high-capability model (e.g., GPT-4o).
 
-Generate teacher input dataset from enhanced prompts:
+*   **Prompting**: Uses specialized templates (`prompts/hypothesis.txt`, `prompts/methodology.txt`) that enforce a specific persona ("Rigorous Scientific Assistant").
+*   **Batching**: Processes inputs in chunks to manage API rate limits and costs.
+*   **Metadata**: Preserves domain and task type metadata for downstream analysis.
 
+### 2. Filtering & Quality Gates (`nexa_distill/filter_pairs.py`, `sample_gate.py`)
+Ensures only high-quality data reaches the training set.
+
+*   **Heuristic Filters**:
+    *   **Length**: Drops responses that are too short (<120 chars) or too long.
+    *   **Keywords**: Enforces presence of action verbs ("simulate", "measure").
+    *   **Formatting**: Checks for forbidden patterns (e.g., markdown errors, refusal strings like "I cannot").
+*   **SampleGate (LLM Judge)**:
+    *   Uses a lighter-weight judge model to score responses on Factuality and Reasoning.
+    *   **Thresholds**: Configurable cutoffs (e.g., `judge_f > 80`, `judge_r > 80`).
+    *   **Safety**: Flags potentially unsafe or hallucinated content.
+
+### 3. Regeneration Loop (`nexa_distill/regenerate_bad.py`)
+A "repair shop" for failed samples. Instead of discarding valuable prompts, we retry them with:
+*   **Stricter System Prompts**: Emphasizing the specific failure mode (e.g., "Be more specific about experimental conditions").
+*   **Higher Capability Models**: Using a stronger teacher (e.g., `o1-preview`) for difficult prompts.
+
+### 4. SFT Packaging (`nexa_distill/to_sft.py`)
+Prepares the final artifact for the training cluster.
+*   **Formatting**: Converts `{prompt, response}` pairs into the standard chat format `{"messages": [{"role": "user", ...}, {"role": "assistant", ...}]}`.
+*   **Splitting**: Creates Train/Val/Test splits.
+*   **Serialization**: Writes to both JSONL (for inspection) and Parquet (for high-performance loading).
+
+## Configuration Reference (`configs/distill_config.yaml`)
+
+The pipeline behavior is controlled by a central YAML file:
+
+```yaml
+defaults:
+  prompt_column: "user_prompt"
+  context_column: "context"
+  task_type_column: "template_name"
+
+collection:
+  teacher_model: "gpt-4o-mini"
+  batch_size: 8
+  system_prompt_path: "nexa_distill/prompts/system_toolproto.txt"
+  
+  # Regeneration settings
+  regen_teacher_model: "o3-mini"
+  regen_system_prompt_path: "nexa_distill/prompts/system_regen.txt"
+
+storage:
+  raw_dataset: "data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet"
+  collected_dataset: "data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet"
+  filtered_dataset: "data/processed/distillation/filtered/teacher_filtered_v1.parquet"
+  regen_dataset: "data/processed/distillation/filtered/teacher_regenerated_v1.parquet"
+  sft_jsonl: "data/processed/training/sft_v1.jsonl"
+  sft_parquet: "data/processed/training/sft_v1.parquet"
+```
+
+## Execution Guide
+
+**1. Full Generation:**
 ```bash
-# Run analysis notebook to curate teacher inputs
-jupyter notebook nexa_data/data_analysis/distill_data_overview.ipynb
+python -m nexa_distill.collect_teacher --config configs/distill_config.yaml
 ```
 
-**Output:** `data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet`
-
-### Stage 2: Collect Teacher Completions
-
-Generate teacher outputs using a strong model (GPT-4, Claude, or Sonnet).
-
+**2. Filter:**
 ```bash
-python -m nexa_distill.collect_teacher \
-  --src data/processed/distillation/teacher_inputs/teacher_inputs_v1.parquet \
-  --dst data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet \
-  --teacher openrouter:gpt-4o \
-  --max-samples 6000
+python -m nexa_distill.filter_pairs --config configs/filters.yaml
 ```
 
-**Input:** Teacher input parquet
-**Output:** `data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet`
-
-### Stage 3: Filter Teacher Outputs
-
-Drop weak, incomplete, or low-quality completions.
-
+**3. Inspect (UI):**
 ```bash
-python -m nexa_distill.filter_pairs \
-  --src data/processed/distillation/teacher_outputs/teacher_outputs_v1.parquet \
-  --dst data/processed/distillation/filtered/teacher_filtered_v1.parquet
+streamlit run nexa_distill/ui_inspect.py -- --src data/processed/distillation/filtered/teacher_filtered_v1.parquet
 ```
 
-**Filtering Rules:**
-- Length > 120 chars
-- Contains action verbs ("prepare", "simulate", "evaluate", "compare")
-- Reject hallucinated citations or broken formatting
-- No bracketed references or citation markers
-
-**Output:** `data/processed/distillation/filtered/teacher_filtered_v1.parquet`
-
-### Stage 4: Human Review (Optional)
-
-Streamlit UI for visual inspection and labeling.
-
-```bash
-streamlit run nexa_distill/ui_inspect.py \
-  -- --src data/processed/distillation/filtered/teacher_filtered_v1.parquet
-```
-
-Produces:
-- `accepted.jsonl` - Human-approved samples
-- `rejected.jsonl` - Samples to regenerate
-
-**Labels stored:** `data/processed/distillation/labels/<date>.jsonl`
-
-### Stage 5: Regenerate Rejected Samples
-
-Re-generate rejected rows via stricter teacher prompts emphasizing falsifiability and reproducibility.
-
+**4. Regenerate:**
 ```bash
 python -m nexa_distill.regenerate_bad \
-  --rejected data/processed/distillation/labels/rejected.jsonl \
-  --dst data/processed/distillation/filtered/teacher_regenerated_v1.parquet
+  --annotations data/processed/distillation/labels/rejected.jsonl \
+  --dst data/processed/distillation/filtered/regen.parquet
 ```
 
-**Output:** `data/processed/distillation/filtered/teacher_regenerated_v1.parquet`
-
-### Stage 6: Package for Training
-
-Convert all accepted data into SFT-ready JSONL format.
-
+**5. Package:**
 ```bash
-python -m nexa_distill.to_sft \
-  --src data/processed/distillation/filtered/teacher_filtered_v1.parquet \
-  --dst data/processed/distillation/sft_datasets/sft_scientific_v1.jsonl
+python -m nexa_distill.to_sft
 ```
-
-**Output:** `data/processed/distillation/sft_datasets/sft_scientific_v1.jsonl`
-
-### Stage 7: Train Student Model
-
-Train student model on distilled dataset.
-
-```bash
-python -m nexa_train.distill \
-  --dataset data/processed/distillation/sft_datasets/sft_scientific_v1.jsonl \
-  --config nexa_train/configs/baseline.yaml \
-  --tags distill-v1 scientific-assistant
-```
-
-## Implementation Details (Run Scripts)
-
-For production execution, we use specialized scripts managed via tmux sessions.
-
-### Data Generation
-- **Script**: `scripts/python/data_processing/run_full_data_gen.py`
-- **Purpose**: Generate teacher outputs for full dataset (no max_samples limit)
-- **Session**: `data_gen`
-- **Config**: `nexa_distill/configs/distill_config.yaml`
-
-### SampleGate Filtering
-- **Module**: `nexa_distill/sample_gate.py`
-- **Purpose**: Quality gate filtering with judge scores, JSON validation, and safety flags
-- **Features**:
-  - Minimum judge score threshold (default: 0.80)
-  - JSON validity checking
-  - Safety flag detection
-  - Rejection reason tracking
-
-### Filtering Pipeline
-- **Script**: `scripts/python/data_processing/run_filtering.py`
-- **Purpose**: Run complete filtering pipeline (basic filters + SampleGate)
-- **Session**: `filtering`
-- **Outputs**:
-  - Filtered dataset: `data/processed/distillation/filtered/filtered_v1.parquet`
-  - Rejections: `data/processed/distillation/filtered/rejections.parquet`
-
-### SFT Packaging
-- **Script**: `scripts/python/deployment/run_packaging.py`
-- **Purpose**: Convert filtered dataset to SFT format (JSONL + Parquet)
-- **Session**: `packaging`
-- **Outputs**:
-  - SFT JSONL: `data/processed/training/sft_dataset.jsonl`
-  - SFT Parquet: `data/processed/training/sft_dataset.parquet`
-
-### Training
-- **Script**: `scripts/shell/training/run_training.sh`
-- **Purpose**: Launch training job (single or distributed)
-- **Session**: `training`
-- **Config**: `nexa_train/configs/baseline_distill.yaml`
-
-### Orchestration
-- **Script**: `scripts/shell/orchestration/launch_pipeline.sh`
-- **Purpose**: Launch all pipeline stages in separate tmux sessions.
-
-## Performance Notes
-
-Based on production runs (Nov 2025):
-*   **Async Speedup**: Implementing async processing with `ThreadPoolExecutor` (256 workers) yielded a **33x speedup** compared to sequential generation.
-    *   100k samples processed in ~3 hours.
-*   **Filtering Retention**: Strict post-processing can result in low retention (<1%). Prompt engineering and SampleGate tuning are critical to improve yield.

@@ -2,16 +2,34 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import BaseException, Dict, Iterable, List, Optional, Sequence
 
 import requests
 
+from nexa_compute.core.exceptions import NexaError, NonRetryableError, RetryableError
+from nexa_compute.utils import CircuitBreaker, CircuitBreakerOpenError, RetryPolicy, retry_call
 
-class OpenRouterError(RuntimeError):
-    """Raised when the OpenRouter API responds with an error status."""
+LOGGER = logging.getLogger(__name__)
+
+
+class OpenRouterError(NexaError):
+    """Base class for OpenRouter failures."""
+
+
+class OpenRouterTransientError(OpenRouterError, RetryableError):
+    """Retryable OpenRouter error carrying optional retry-after hint."""
+
+    def __init__(self, message: str, *, retry_after: Optional[float] = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+class OpenRouterFatalError(OpenRouterError, NonRetryableError):
+    """Non-retryable OpenRouter error."""
 
 
 @dataclass(frozen=True)
@@ -23,7 +41,11 @@ class OpenRouterConfig:
     base_url: str = "https://openrouter.ai/api/v1"
     timeout_s: int = 60
     max_retries: int = 3
-    retry_backoff: float = 1.5
+    retry_backoff: float = 1.0
+    retry_jitter: float = 0.2
+    circuit_breaker_failure_threshold: int = 5
+    circuit_breaker_recovery_seconds: float = 60.0
+    circuit_breaker_half_open_max_calls: int = 1
     default_temperature: float = 0.2
     default_max_tokens: int = 2048
     headers: Dict[str, str] = field(default_factory=dict)
@@ -90,6 +112,19 @@ class OpenRouterClient:
             }
         )
         self._session.headers.update(config.headers)
+        self._retry_policy = RetryPolicy(
+            max_attempts=max(1, config.max_retries),
+            base_delay=max(0.1, config.retry_backoff),
+            max_delay=max(0.1, config.retry_backoff * 8),
+            jitter=min(max(config.retry_jitter, 0.0), 1.0),
+            retry_exceptions=(requests.RequestException, OpenRouterTransientError),
+            non_retry_exceptions=(OpenRouterFatalError,),
+        )
+        self._breaker = CircuitBreaker(
+            failure_threshold=config.circuit_breaker_failure_threshold,
+            recovery_timeout=config.circuit_breaker_recovery_seconds,
+            half_open_max_calls=config.circuit_breaker_half_open_max_calls,
+        )
 
     def close(self) -> None:
         """Close the underlying HTTP session."""
@@ -118,62 +153,102 @@ class OpenRouterClient:
         model: Optional[str] = None,
     ) -> OpenRouterResponse:
         payload = self._build_payload(request, model=model)
-        retries = 0
-        backoff = self._config.retry_backoff
         start = time.perf_counter()
-        while True:
+
+        def _call() -> OpenRouterResponse:
             response = self._session.post(
                 f"{self._config.base_url}/chat/completions",
                 json=payload,
                 timeout=self._config.timeout_s,
             )
-            if response.status_code == 200:
-                latency_ms = (time.perf_counter() - start) * 1000.0
-                body = response.json()
-                choice = body["choices"][0]
-                message = choice["message"]
-                output_text = message.get("content") or ""
-                finish_reason = choice.get("finish_reason", "unknown")
-                
-                if not output_text:
-                    import warnings
-                    warnings.warn(
-                        f"Empty response from {payload.get('model', 'unknown')}. "
-                        f"Finish reason: {finish_reason}. "
-                        f"Prompt tokens: {body.get('usage', {}).get('prompt_tokens', 0)}"
-                    )
-                elif finish_reason == "length":
-                    import warnings
-                    warnings.warn(
-                        f"Response truncated (max_tokens reached) for {payload.get('model', 'unknown')}. "
-                        f"Output length: {len(output_text)}"
-                    )
-                
-                usage_info = body.get("usage", {})
-                usage = OpenRouterUsage(
-                    prompt_tokens=int(usage_info.get("prompt_tokens", 0)),
-                    completion_tokens=int(usage_info.get("completion_tokens", 0)),
+            if response.status_code != 200:
+                self._raise_for_status(response)
+
+            latency_ms = (time.perf_counter() - start) * 1000.0
+            body = response.json()
+            choice = body["choices"][0]
+            message = choice["message"]
+            output_text = message.get("content") or ""
+            finish_reason = choice.get("finish_reason", "unknown")
+
+            if not output_text:
+                import warnings
+
+                warnings.warn(
+                    f"Empty response from {payload.get('model', 'unknown')}. "
+                    f"Finish reason: {finish_reason}. "
+                    f"Prompt tokens: {body.get('usage', {}).get('prompt_tokens', 0)}",
+                    stacklevel=2,
                 )
-                metadata = request.metadata or {}
-                return OpenRouterResponse(
-                    prompt=request.prompt,
-                    output_text=output_text,
-                    model=body.get("model", payload["model"]),
-                    latency_ms=latency_ms,
-                    usage=usage,
-                    raw=body,
-                    metadata=metadata if metadata else None,
+            elif finish_reason == "length":
+                import warnings
+
+                warnings.warn(
+                    f"Response truncated (max_tokens reached) for {payload.get('model', 'unknown')}. "
+                    f"Output length: {len(output_text)}",
+                    stacklevel=2,
                 )
 
-            if retries >= self._config.max_retries:
-                raise OpenRouterError(
-                    f"OpenRouter request failed with status {response.status_code}: {response.text}"
-                )
+            usage_info = body.get("usage", {})
+            usage = OpenRouterUsage(
+                prompt_tokens=int(usage_info.get("prompt_tokens", 0)),
+                completion_tokens=int(usage_info.get("completion_tokens", 0)),
+            )
+            metadata = request.metadata or {}
+            return OpenRouterResponse(
+                prompt=request.prompt,
+                output_text=output_text,
+                model=body.get("model", payload["model"]),
+                latency_ms=latency_ms,
+                usage=usage,
+                raw=body,
+                metadata=metadata if metadata else None,
+            )
 
-            # Retry with exponential backoff
-            retries += 1
-            time.sleep(backoff)
-            backoff *= self._config.retry_backoff
+        try:
+            return retry_call(
+                _call,
+                policy=self._retry_policy,
+                on_retry=self._log_retry_attempt,
+                circuit_breaker=self._breaker,
+            )
+        except CircuitBreakerOpenError as exc:
+            raise OpenRouterError("OpenRouter circuit breaker is open; refusing to execute request.") from exc
+
+    def _log_retry_attempt(self, attempt: int, exc: BaseException, delay: float) -> None:
+        LOGGER.warning(
+            "openrouter_retry_attempt",
+            extra={
+                "extra_context": {
+                    "attempt": attempt,
+                    "delay_s": round(delay, 3),
+                    "exc": repr(exc),
+                }
+            },
+        )
+
+    def _raise_for_status(self, response: requests.Response) -> None:
+        retry_after = response.headers.get("Retry-After")
+        retry_after_value: Optional[float] = None
+        if retry_after is not None:
+            try:
+                retry_after_value = float(retry_after)
+            except ValueError:
+                retry_after_value = None
+
+        status = response.status_code
+        body = response.text
+
+        if status == 429 or 500 <= status < 600:
+            raise OpenRouterTransientError(
+                f"OpenRouter transient failure {status}: {body}",
+                retry_after=retry_after_value,
+            )
+
+        if 400 <= status < 500:
+            raise OpenRouterFatalError(f"OpenRouter request failed {status}: {body}")
+
+        response.raise_for_status()
 
     def _build_payload(
         self,

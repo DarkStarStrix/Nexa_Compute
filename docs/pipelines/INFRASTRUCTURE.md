@@ -1,156 +1,82 @@
 # Nexa Infrastructure & Operations
 
-> **Scope**: Provisioning, Scheduling, and Monitoring.
+> **Scope**: Provisioning, Scheduling, Monitoring, and Containerization.
 > **Modules**: `nexa_infra`
 
-This module handles the low-level infrastructure required to run the platform, bridging the gap between the software stack and the physical/cloud hardware.
+The `nexa_infra` module is the foundation of the platform. It abstracts the complexity of underlying hardware—whether local development machines, ephemeral cloud GPU nodes, or HPC Slurm clusters—providing a uniform API for job execution and resource management.
 
-## Core Components
+## 1. Job Scheduling & Launching
 
-### 1. Provisioning (`nexa_infra/provisioning`)
-*   **Cluster Management**: Bootstraps ephemeral GPU clusters (e.g., via Prime Intellect or Slurm).
-*   **Tailscale Integration**: Secures node-to-node communication.
+### The Launcher (`nexa_infra/operations/launch.py`)
+This is the high-level switching logic that decides *where* and *how* a job runs.
 
-### 2. Scheduling (`nexa_infra/scheduling`)
-*   **Slurm Adapter**: Submits and monitors jobs on HPC clusters.
-*   **Docker**: Manages container lifecycles for consistent execution environments.
+*   **Local Training**: Launches `nexa_train` directly in the current process or subprocess.
+*   **Distributed Training (DDP)**: Uses `torchrun` (via `scripts/launch_ddp.sh`) to spin up multiple processes on a single or multiple nodes. It handles environment variable propagation (`MASTER_ADDR`, `RANK`, `WORLD_SIZE`).
+*   **Slurm Sweeps**: Interfaces with the Slurm scheduler to submit job arrays for hyperparameter optimization.
 
-### 3. Monitoring (`nexa_infra/monitoring`)
-*   **Cost Tracking**: Estimates GPU hours and API usage costs.
-*   **Resource Usage**: Tracks CPU/RAM/GPU saturation.
+### Slurm Integration (`nexa_infra/scheduling/slurm.py`)
+Automates the creation of complex `sbatch` scripts.
 
-## Containers
+*   **Parameter Expansion**: Takes a `SweepDefinition` (grid of parameters) and performs a Cartesian product to generate unique configurations for every job in the array.
+*   **Spec Generation**: Writes a `spec.json` file that maps `SLURM_ARRAY_TASK_ID` to specific command-line arguments. The Python worker script reads this spec to configure itself at runtime.
+*   **Resource definition**: Maps high-level requests (nodes, gpus) to Slurm directives (`#SBATCH --partition`, `#SBATCH --gpus-per-node`).
 
-The platform uses specialized Docker images for different workloads:
-*   `train-heavy.Dockerfile`: For heavy training jobs (Axolotl, CUDA 12.1).
-*   `train-light.Dockerfile`: For CPU-bound tasks or lightweight training.
-*   `infer.Dockerfile`: For vLLM serving.
+## 2. Containerization
 
-## Docker Deployment
-
-Curated container images for Nexa Compute training and inference workloads live here.
+NexaCompute enforces reproducible environments via a strict 3-tier container strategy.
 
 ### Image Matrix
 
 | Service | Dockerfile | Default Tag | Purpose |
 | --- | --- | --- | --- |
-| `nexa_light` | `docker/train-light.Dockerfile` | `ghcr.io/nexa/nexa_light:latest` | HF/TRL stack for ≤20B parameter jobs (LoRA, QLoRA, TRL finetunes). |
-| `nexa_heavy` | `docker/train-heavy.Dockerfile` | `ghcr.io/nexa/nexa_heavy:latest` | Axolotl, DeepSpeed, FSDP for >20B or multi-node jobs. |
-| `nexa_infer` | `docker/infer.Dockerfile` | `ghcr.io/nexa/nexa_infer:latest` | Lean vLLM/TensorRT-LLM inference stack. |
+| `nexa_light` | `docker/train-light.Dockerfile` | `ghcr.io/nexa/nexa_light:latest` | **Standard Training**: HF/TRL stack for ≤20B models. Optimized for single-node jobs. |
+| `nexa_heavy` | `docker/train-heavy.Dockerfile` | `ghcr.io/nexa/nexa_heavy:latest` | **Scale Training**: Axolotl, DeepSpeed, FlashAttention-2. Includes compilation tools for FSDP. |
+| `nexa_infer` | `docker/infer.Dockerfile` | `ghcr.io/nexa/nexa_infer:latest` | **Inference**: Lean vLLM/TensorRT-LLM stack. Minimal dependencies for fast startup. |
 
-### Common Baseline
+### Runner (`nexa_infra/containers/runner.py`)
+A Python wrapper around the Docker CLI.
+*   **Volume Mounting**: Automatically mounts `/workspace`, `/mnt/nvme` (fast storage), and `~/.cache/huggingface` (model cache).
+*   **User Mapping**: Maps the host user ID to the container user to prevent file permission issues on shared volumes.
+*   **Bootstrap**: Uses `bin/nexa-bootstrap.sh` to initialize the environment inside the container.
 
-All images:
-- Pin CUDA 12.1.1 runtime with cuDNN8 on Ubuntu 22.04.
-- Use Python 3.11 (`uv` pre-installed for dependency management).
-- Install PyTorch from the official cu121 wheel index (no source builds).
-- Assume a Hugging Face cache mounted at `/home/runner/.cache/huggingface`.
+## 3. Monitoring & Cost
 
-The legacy monolithic image remains in `docker/Dockerfile` for backward compatibility, but new workflows should stick to the trio above.
+### Cost Estimation (`nexa_infra/monitoring/costs.py`)
+Provides financial visibility into large-scale runs.
 
-### Quick Start
+*   **Estimation**: Before launching a Slurm sweep, it calculates: `Nodes × GPUs/Node × Est. Duration × Hourly Rate`.
+*   **Logging**: Persists cost manifests (`cost_<run_id>.json`) to `runs/manifests/`.
+*   **Aggregation**: Can summarize total spend across a campaign.
+*   **Defaults**: Includes pricing tables for common GPUs (H100, A100, RTX 4090).
 
-#### 1. Bootstrap from Any Fresh Node
+### Resource Monitoring
+*   Standard Prometheus/Grafana integrations (via `nexa_infra/monitoring/config/prometheus.yml`) track GPU saturation, VRAM usage, and temperature.
 
-```
-bash bin/nexa-bootstrap.sh
-```
+## 4. Operations
 
-- Pulls `training-light` by default.
-- Mounts the current repo into `/workspace/nexa_compute`.
-- Mounts `${HOME}/.cache/huggingface` for reuse across runs.
-- Supports overrides via environment variables:
-  - `WORK=/custom/workspace bash bin/nexa-bootstrap.sh …`
-  - `NVME=/mnt/nvme2 bash bin/nexa-bootstrap.sh …`
-  - `SHM_SIZE=32g bash bin/nexa-bootstrap.sh ghcr.io/nexa/training-heavy:latest`
+### Sync (`nexa_infra/operations/sync.py`)
+Critical for remote development.
+*   **`sync_repository`**: Uses `rsync` to intelligently push code from a local laptop to a remote cluster head node. It excludes heavy artifacts (`runs/`, `__pycache__`) to ensure sub-second sync times.
 
-#### 2. One-Liner Helpers
+### Teardown (`nexa_infra/provisioning/teardown.py`)
+*   Automates the cleanup of ephemeral resources (e.g., Terraform state) after a campaign finishes.
 
-```
-# train ≤20B parameter models
-python orchestrate.py run train-light
+## Usage Examples
 
-# train >20B / multi-node jobs
-python orchestrate.py run train-heavy
+**Launch a Slurm Sweep:**
+```python
+from nexa_infra.operations.launch import launch_slurm_sweep
+from pathlib import Path
 
-# serve inference with vLLM
-python orchestrate.py run infer
-```
-
-Each helper shells out to `bin/nexa-bootstrap.sh` with the appropriate image and shared-memory size.
-
-#### 3. Direct Docker Run
-
-```
-docker run -it --gpus all --rm \
-  --shm-size=16g \
-  -v $HOME/.cache/huggingface:/home/runner/.cache/huggingface \
-  -v /mnt/nvme:/mnt/nvme \
-  -v $PWD:/workspace/nexa_compute \
-  --env-file .env \
-  ghcr.io/nexa/nexa_light:latest
+config = Path("nexa_train/sweeps/random_search.yaml")
+artifacts = launch_slurm_sweep(config, submit=True)
+print(f"Submitted job array {artifacts.job_count} jobs")
 ```
 
-For heavy jobs bump `--shm-size` to at least `32g`. `.env` should house WANDB, Hugging Face, AWS, and NCCL configuration.
+**Run a Container:**
+```python
+from nexa_infra.containers.runner import run_container
 
-#### 4. Compose-Based Publish
-
-To build all three curated images from the repo root, use the publish compose file:
-
+# Launches an interactive shell in the heavy training container
+run_container("train-heavy")
 ```
-docker compose -f docker/compose.publish.yaml build --pull
-docker compose -f docker/compose.publish.yaml push
-
-DATE=$(date -u +%Y%m%d)
-for svc in nexa_light nexa_heavy nexa_infer; do
-  docker tag ghcr.io/nexa/${svc}:cu121-py311-pt22 ghcr.io/nexa/${svc}:latest
-  docker push ghcr.io/nexa/${svc}:latest
-  docker tag ghcr.io/nexa/${svc}:cu121-py311-pt22 ghcr.io/nexa/${svc}:${DATE}
-  docker push ghcr.io/nexa/${svc}:${DATE}
-done
-```
-
-GitHub Actions mirrors this exact flow on every push to `main`, so merges automatically refresh `ghcr.io/nexa/nexa_*` with the variant, latest, and date tags.
-
-### Build & Publish
-
-```
-# Train light
-docker build -f docker/train-light.Dockerfile -t ghcr.io/nexa/nexa_light:cu121-py311-pt22 .
-
-# Train heavy
-docker build -f docker/train-heavy.Dockerfile -t ghcr.io/nexa/nexa_heavy:cu121-py311-pt22 .
-
-# Inference
-docker build -f docker/infer.Dockerfile -t ghcr.io/nexa/nexa_infer:cu121-py311-pt22 .
-```
-
-Push canonical tags:
-
-```
-docker push ghcr.io/nexa/nexa_light:cu121-py311-pt22
-docker tag ghcr.io/nexa/nexa_light:cu121-py311-pt22 ghcr.io/nexa/nexa_light:latest
-docker push ghcr.io/nexa/nexa_light:latest
-```
-
-Repeat for `nexa_heavy` and `nexa_infer`. Add a date tag (`:YYYYMMDD`) for immutable releases.
-
-### Entrypoints
-
-- `docker/entrypoints/vllm_entry.sh` swaps between an interactive shell and the OpenAI-compatible vLLM server depending on the `MODEL` env var.
-- Training images drop users into a prepared shell with a non-root `runner` account.
-
-### Environment Expectations
-
-Key environment variables are passed via `.env` or `--env` flags:
-
-- `WANDB_API_KEY`, `HF_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-- NCCL tuning: `NCCL_P2P_DISABLE`, `NCCL_IB_DISABLE`, `NCCL_DEBUG`
-- Inference: `MODEL`, `PORT`, `TP`, and any `VLLM_EXTRA_ARGS`
-
-### Caching & Performance Notes
-
-- Persist `/home/runner/.cache/huggingface` across runs to avoid redownloads.
-- Attach high-throughput NVMe (`/mnt/nvme`) for checkpoints and datasets.
-- Allocate sufficient shared memory (`--shm-size`) for bigger batch sizes.
-- Keep CUDA/PyTorch layers near the top of each Dockerfile for cache reuse.

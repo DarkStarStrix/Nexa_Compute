@@ -81,10 +81,17 @@ Nexa_compute/
 ├── src/
 │   └── nexa_compute/
 │       ├── api/         # FastAPI backend
-│       └── cli/         # CLI Entrypoint
+│       ├── cli/         # CLI Entrypoint
+│       ├── core/        # Core Primitives (DAG, Registry, Artifacts)
+│       ├── data/        # DataOps (Versioning, Lineage)
+│       ├── models/      # ModelOps (Registry, Versioning)
+│       ├── monitoring/  # Observability (Alerts, Metrics, Drift)
+│       └── orchestration/ # Workflow Engine (Scheduler, Templates)
 ├── docs/
 │   ├── compute_plans/   # Training Configuration Templates (V1/V2/V3)
 │   ├── pipelines/       # Detailed Architecture Docs
+│   ├── platform/        # Platform Guide & Best Practices
+│   ├── api/             # API Reference
 │   └── projects/        # Active Research Projects
 ├── sdk/                 # Python Client SDK
 └── pyproject.toml       # Dependencies & Config
@@ -97,15 +104,19 @@ Nexa_compute/
 ### Compute Engine
 - **Unified Training CLI**: `nexa_train/train.py` supports flexible overrides and configuration modes (V1 Stability, V2 Performance, V3 Full).
 - **Infrastructure as Code**: Terraform modules for AWS GPU clusters.
-- **Observability**: Prometheus/Grafana stack for real-time hardware monitoring.
-- **Automated Provisioning**: One-command deployment to bare metal or cloud instances.
+- **Observability**: Distributed tracing (OpenTelemetry), Prometheus metrics, and real-time cost tracking.
+- **Automated Provisioning**: One-command deployment to bare metal or cloud instances with Spot instance support.
 
 ### Managed API (Nexa Forge)
+- **Workflows**: Declarative pipeline orchestration (DAGs) with resume capability.
 - **6 Job Types**: Generate, Audit, Distill, Train, Evaluate, Deploy.
 - **Worker Orchestration**: Pull-based job queue for ephemeral workers.
 - **Security**: SHA256 API keys and metered billing.
 
-**Note**: Nexa Forge is currently under active development. Features and APIs are subject to change.
+### MLOps & DataOps
+- **Model Registry**: Full lineage tracking from dataset to deployed model.
+- **Data Versioning**: Content-addressable storage for datasets.
+- **Monitoring**: Automated drift detection and A/B testing framework.
 
 ---
 
@@ -114,6 +125,8 @@ Nexa_compute/
 For detailed instructions on how the platform works and what each component does, please refer to the documentation:
 
 - **[Documentation Map](docs/README.md)**: Central index for all documentation.
+- **[Platform Guide](docs/platform/README.md)**: Overview of platform capabilities.
+- **[API Reference](docs/api/README.md)**: API endpoints and usage.
 - **[Infrastructure Guide](docs/pipelines/INFRASTRUCTURE.md)**: Docker, Provisioning, and Hardware.
 - **[Training Pipeline](docs/pipelines/TRAINING.md)**: Configuration and Execution.
 - **[Data Refinery](docs/pipelines/DATA.md)**: MS/MS and Synthetic Data.

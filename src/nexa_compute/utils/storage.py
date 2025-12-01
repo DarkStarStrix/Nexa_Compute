@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+import hashlib
+import logging
 import os
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+from .retry import RetryPolicy, retry_call
+
+LOGGER = logging.getLogger(__name__)
+
+_COPY_POLICY = RetryPolicy(
+    max_attempts=5,
+    base_delay=0.5,
+    max_delay=5.0,
+    jitter=0.25,
+    retry_exceptions=(OSError, IOError),
+)
 
 
 class StoragePaths:
@@ -97,8 +111,9 @@ class StoragePaths:
             raise FileNotFoundError(f"Checkpoint not found in scratch: {scratch_checkpoint}")
         
         durable_checkpoint.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(scratch_checkpoint, durable_checkpoint)
-        
+        _copy_file_with_retry(scratch_checkpoint, durable_checkpoint)
+        _verify_checksum(scratch_checkpoint, durable_checkpoint)
+
         return durable_checkpoint
     
     def sync_run_to_durable(self, run_id: str) -> None:
@@ -115,9 +130,78 @@ class StoragePaths:
         for item in scratch_run.iterdir():
             dest = durable_run / item.name
             if item.is_file():
-                shutil.copy2(item, dest)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                _copy_file_with_retry(item, dest)
             elif item.is_dir():
-                shutil.copytree(item, dest, dirs_exist_ok=True)
+                _copy_directory_with_retry(item, dest)
+
+
+def _copy_file_with_retry(source: Path, destination: Path) -> None:
+    """Copy ``source`` to ``destination`` with retry semantics."""
+
+    def _copy() -> None:
+        shutil.copy2(source, destination)
+
+    retry_call(
+        _copy,
+        policy=_COPY_POLICY,
+        on_retry=lambda attempt, exc, delay: LOGGER.warning(
+            "storage_copy_retry",
+            extra={
+                "extra_context": {
+                    "path": str(source),
+                    "attempt": attempt,
+                    "delay_s": round(delay, 3),
+                    "error": repr(exc),
+                }
+            },
+        ),
+    )
+
+
+def _copy_directory_with_retry(source: Path, destination: Path) -> None:
+    """Copy an entire directory with retry support."""
+
+    def _copy_dir() -> None:
+        if destination.exists():
+            shutil.rmtree(destination)
+        shutil.copytree(source, destination)
+
+    retry_call(
+        _copy_dir,
+        policy=_COPY_POLICY,
+        on_retry=lambda attempt, exc, delay: LOGGER.warning(
+            "storage_copy_dir_retry",
+            extra={
+                "extra_context": {
+                    "path": str(source),
+                    "attempt": attempt,
+                    "delay_s": round(delay, 3),
+                    "error": repr(exc),
+                }
+            },
+        ),
+    )
+
+
+def _verify_checksum(source: Path, destination: Path) -> None:
+    """Ensure source and destination files share the same SHA256 checksum."""
+    if not destination.exists():
+        raise FileNotFoundError(f"Destination checkpoint missing after copy: {destination}")
+    if source.stat().st_size != destination.stat().st_size:
+        raise IOError(
+            f"Checkpoint copy incomplete (size mismatch) {source.stat().st_size} != {destination.stat().st_size}"
+        )
+    if _sha256(source) != _sha256(destination):
+        raise IOError("Checkpoint copy corrupted: checksum mismatch")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def generate_run_id(prefix: str = "run") -> str:

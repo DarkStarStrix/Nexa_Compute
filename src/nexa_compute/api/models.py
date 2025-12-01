@@ -1,7 +1,30 @@
-from enum import Enum
-from typing import Dict, Any, Optional, List
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from enum import Enum
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+MAX_PAYLOAD_ITEMS = 100
+MAX_PAYLOAD_STRING_LEN = 4000
+
+
+def _sanitize_value(value: Any) -> Any:
+    if isinstance(value, str):
+        stripped = value.strip()
+        if len(stripped) > MAX_PAYLOAD_STRING_LEN:
+            raise ValueError("Payload string exceeds maximum length")
+        if ".." in stripped and ("/" in stripped or "\\" in stripped):
+            raise ValueError("Potential path traversal detected in payload string")
+        return stripped
+    if isinstance(value, dict):
+        if len(value) > MAX_PAYLOAD_ITEMS:
+            raise ValueError("Payload dict exceeds maximum allowed keys")
+        return {str(k): _sanitize_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        if len(value) > MAX_PAYLOAD_ITEMS:
+            raise ValueError("Payload list exceeds maximum allowed length")
+        return [_sanitize_value(item) for item in value]
+    return value
 
 class JobStatus(str, Enum):
     PENDING = "pending"
@@ -37,6 +60,11 @@ class BaseJob(BaseModel):
 
 class CreateJobRequest(BaseModel):
     payload: Dict[str, Any]
+
+    @model_validator(mode="after")
+    def _validate_payload(cls, value: "CreateJobRequest") -> "CreateJobRequest":
+        value.payload = _sanitize_value(value.payload)
+        return value
 
 class GenerateRequest(CreateJobRequest):
     job_type: JobType = JobType.GENERATE

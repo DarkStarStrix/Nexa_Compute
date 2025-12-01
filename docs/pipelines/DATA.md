@@ -1,7 +1,6 @@
 # NexaData Engineering Architecture
 
 > **Scope**: Data Ingestion, Validation, Synthetic Generation, and Distillation.
-> **Scope**: Data Ingestion, Validation, Synthetic Generation, and Distillation.
 > **Modules**: `nexa_data`
 
 NexaData is the production-grade data refinery for NexaCompute. It operates upstream of training, ensuring that all datasets are structurally valid, semantically consistent, and reproducible before they reach the compute cluster.

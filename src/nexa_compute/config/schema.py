@@ -136,6 +136,7 @@ class TrainingLoopConfig(BaseModel):
     distributed: DistributedConfig = Field(default_factory=DistributedConfig)
     checkpoint: CheckpointConfig = Field(default_factory=CheckpointConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    timeout_seconds: Optional[int] = None
 
 
 class TrainingConfig(BaseModel):

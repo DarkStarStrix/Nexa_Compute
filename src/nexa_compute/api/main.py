@@ -7,9 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from nexa_compute.api.config import get_settings
 from nexa_compute.api.database import init_db
-from nexa_compute.api.endpoints import auth, billing, artifacts, jobs, workers
+from nexa_compute.api.endpoints import artifacts, auth, billing, health, jobs, metrics, workers, workflows
+from nexa_compute.utils.tracing import configure_tracing, instrument_app
 
 settings = get_settings()
+
+configure_tracing(service_name="nexa-api", instrument_fastapi=True)
 
 
 @asynccontextmanager
@@ -39,6 +42,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+instrument_app(app)
+
 # Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
@@ -53,10 +58,9 @@ app.include_router(workers.router, prefix="/api/workers", tags=["workers"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(artifacts.router, prefix="/api/artifacts", tags=["artifacts"])
-
-@app.get("/health")
-def health_check():
-    return {"status": "healthy", "version": "0.1.0"}
+app.include_router(metrics.router, tags=["metrics"])
+app.include_router(health.router, tags=["health"])
+app.include_router(workflows.router, prefix="/api/workflows", tags=["workflows"])
 
 @app.get("/")
 def root():
