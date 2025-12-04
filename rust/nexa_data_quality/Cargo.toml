@@ -1,0 +1,22 @@
+[package]
+name = "nexa_data_quality"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "nexa_data_quality"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py38"] }
+arrow = { version = "52.0", features = ["pyarrow"] }
+parquet = "52.0"
+rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bloom = "0.3"
+sha2 = "0.10"
+hex = "0.4"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+tikv-jemallocator = "0.5"

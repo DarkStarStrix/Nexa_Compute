@@ -1,0 +1,19 @@
+[package]
+name = "nexa_train_pack"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "nexa_train_pack"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py38"] }
+rayon = "1.10"
+rand = "0.8"
+rand_chacha = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+tikv-jemallocator = "0.5"

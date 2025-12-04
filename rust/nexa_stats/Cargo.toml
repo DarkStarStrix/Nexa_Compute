@@ -1,0 +1,18 @@
+[package]
+name = "nexa_stats"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "nexa_stats"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py38"] }
+statrs = "0.16"
+rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+tikv-jemallocator = "0.5"

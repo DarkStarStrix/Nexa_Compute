@@ -1,0 +1,75 @@
+---
+alwaysApply: false
+---
+# -----------------------------------------
+# NexaCompute — Core Architecture Rules
+# (Paste into Cursor / Monorepo Standards)
+# -----------------------------------------
+
+## **Simple Rules**
+1. One module → one responsibility.  
+2. All inputs/outputs must use versioned manifests.  
+3. Python = orchestration; no heavy compute.  
+4. Rust = deterministic, high-volume compute only.  
+5. Go = tools/TUI/UX; never core logic.  
+6. Bash = minimal wrappers; no real logic.  
+7. Errors must be loud; no silent failures.  
+8. No feature is complete without tests.  
+9. Pipelines must be idempotent and retry-safe.  
+10. Module dependencies must form a DAG (no cycles).  
+11. Automate anything repeated twice.  
+12. Maintain global system clarity; refactor if complexity grows.
+
+---
+
+# **Expanded Rules (Short Form)**
+
+### **1. One module → one responsibility.**
+Each module should solve exactly one conceptual problem.  
+If a feature doesn’t fit the module’s core purpose, move or refactor it.
+
+### **2. All inputs/outputs must use versioned manifests.**
+No raw folders or implicit file structures.  
+Every major artifact must have a manifest so pipelines stay reproducible and debuggable.
+
+### **3. Python = orchestration; no heavy compute.**
+Python handles workflows, configs, CLIs, APIs, and glue code.  
+All performance-critical logic must be delegated to Rust or the GPU.
+
+### **4. Rust = deterministic, high-volume compute only.**
+Rust owns CPU-heavy loops, data transforms, packing, filtering, and scientific preprocessing.  
+Never use Rust for orchestration or high-level logic.
+
+### **5. Go = tools/TUI/UX; never core logic.**
+Go is for operator tools, dashboards, automation helpers, or clean binaries.  
+It must not contain ML logic or critical transforms.
+
+### **6. Bash = minimal wrappers; no real logic.**
+Bash is only for launching processes, setting environments, or coordinating sessions.  
+Any branching or computation belongs in Python or Go.
+
+### **7. Errors must be loud; no silent failures.**
+All errors must emit structured logs or manifest entries with full context.  
+Silent failures are forbidden — fail loudly and informatively.
+
+### **8. No feature is complete without tests.**
+Every new feature or module requires unit tests and at least one integration test.  
+If it isn’t testable, it isn’t stable.
+
+### **9. Pipelines must be idempotent and retry-safe.**
+Running a pipeline twice should produce the same artifacts and manifests.  
+This prevents corruption and makes large-scale ML runs recoverable.
+
+### **10. Module dependencies must form a DAG (no cycles).**
+No module may depend on something that depends on it.  
+If a cycle appears, extract a shared lower-level module.
+
+### **11. Automate anything repeated twice.**
+Manual repetition creates entropy.  
+Automate on the second occurrence, formalize as a CLI on the third.
+
+### **12. Maintain global system clarity; refactor if complexity grows.**
+You must always be able to reason about the system end-to-end.  
+If the architecture stops fitting in your head, simplify it.
+
+---
