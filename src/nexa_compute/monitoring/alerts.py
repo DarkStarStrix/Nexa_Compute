@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-from ..utils.retry import RetryPolicy, retry_call
+from ..core.retry import RetryPolicy, retry_call
 
 LOGGER = logging.getLogger(__name__)
 

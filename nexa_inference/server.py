@@ -19,8 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from nexa_compute.api.config import get_settings
 from nexa_compute.experiments import get_ab_manager
 from nexa_compute.monitoring.model_monitor import ModelMonitor
-from nexa_compute.utils.metrics import MetricsRegistry
-from nexa_compute.utils.tracing import configure_tracing, instrument_app, trace_span
+from nexa_compute.monitoring.metrics import MetricsRegistry
+from nexa_compute.monitoring.tracing import configure_tracing, instrument_app, trace_span
 
 LOGGER = logging.getLogger(__name__)
 settings = get_settings()

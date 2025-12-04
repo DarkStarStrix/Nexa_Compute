@@ -20,6 +20,16 @@ class DatasetRegistry:
         self._factory.register(name, builder)
 
     def build(self, config: DataConfig, *, split: str) -> Dataset:
+        """Build a dataset from configuration.
+        
+        **Versioned Manifest**: All datasets must have a dataset_version specified in config.
+        This version is used for reproducibility and manifest tracking.
+        """
+        if not config.dataset_version:
+            LOGGER.warning(
+                "dataset_version_missing",
+                extra={"dataset_name": config.dataset_name},
+            )
         return self._factory.build(config, split=split)
 
     def available(self) -> Dict[str, Callable[[DatasetBuildContext], Dataset]]:

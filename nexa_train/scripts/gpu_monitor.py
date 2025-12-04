@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 
-from nexa_compute.utils.gpu_monitor import stream_gpu_stats
+from nexa_compute.monitoring.gpu_monitor import stream_gpu_stats
 
 
 def parse_args() -> argparse.Namespace:

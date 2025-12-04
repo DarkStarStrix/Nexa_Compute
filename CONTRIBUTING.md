@@ -60,3 +60,46 @@ See [docs/conventions/](docs/conventions/) for detailed info on:
 - Limit the first line to 72 characters or less
 - Reference issues and pull requests liberally after the first line
 
+## Monthly Pruning Process
+
+Per the [Scaling Policy](docs/conventions/Scaling_Policy.md), NexaCompute requires monthly maintenance to prevent sprawl:
+
+### Checklist (Run Monthly)
+
+1. **Review `experiments/` folder**
+   - Move production-ready code to appropriate modules
+   - Remove abandoned or stale experiments
+   - Document active experiments with purpose statements
+
+2. **Audit abandoned scripts**
+   - Check `scripts/` and `nexa_*/scripts/` for unused scripts
+   - Remove scripts that are no longer referenced
+   - Consolidate duplicate functionality
+
+3. **Clean up outdated configs**
+   - Review `nexa_infra/configs/` and `nexa_train/configs/`
+   - Remove deprecated configuration templates
+   - Archive old configs to `docs/archive/` if historically significant
+
+4. **Consolidate utilities**
+   - Review any new utility modules that may have appeared
+   - Ensure utilities are in domain-specific modules (not generic `utils/`)
+   - Merge duplicate utility functions
+
+5. **Remove unused pathways**
+   - Check for dead code paths
+   - Remove unused imports and dependencies
+   - Clean up deprecated API endpoints
+
+6. **Update documentation**
+   - Ensure module responsibility statements are current
+   - Update architecture diagrams if structure changed
+   - Refresh dependency graphs
+
+### Process
+
+1. Create a monthly pruning issue/PR
+2. Run through the checklist above
+3. Document what was removed and why
+4. Update this document if process changes
+

@@ -13,7 +13,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from nexa_compute.utils import RetryError, RetryPolicy, retry_call
+from nexa_compute.core.retry import RetryError, RetryPolicy, retry_call
 
 from .metrics import PipelineMetrics
 

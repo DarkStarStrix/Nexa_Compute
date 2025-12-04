@@ -6,7 +6,7 @@ from typing import Dict
 
 import requests
 
-from nexa_compute.utils import get_logger
+from nexa_compute.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
 

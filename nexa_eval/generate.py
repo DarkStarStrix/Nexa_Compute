@@ -26,7 +26,7 @@ if VENDOR.exists() and str(VENDOR) not in sys.path:
 from nexa_compute.config import load_config  # type: ignore
 from nexa_compute.data.pipeline import DataPipeline  # type: ignore
 from nexa_compute.models.base import DEFAULT_MODEL_REGISTRY  # type: ignore
-from nexa_compute.utils.checkpoint import load_checkpoint  # type: ignore
+from nexa_compute.training.checkpoint import load_checkpoint  # type: ignore
 
 try:
     from vllm import LLM, SamplingParams

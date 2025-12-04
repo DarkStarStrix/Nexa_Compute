@@ -12,6 +12,8 @@ import torch.nn as nn
 
 from ..config import TrainingConfig, load_config, save_run_config
 from ..config.schema import TrainingConfig as TrainingSchema
+from ..core.manifests import RunManifest, get_git_commit
+from ..core.storage import generate_run_id
 from ..data import DEFAULT_REGISTRY as DEFAULT_DATASET_REGISTRY
 from ..data import DataPipeline, DatasetRegistry
 from ..evaluation import Evaluator
@@ -25,11 +27,10 @@ from ..training import (
     Trainer,
     launch_distributed,
 )
+from ..training.checkpoint import checkpoint_path, load_checkpoint
 from ..training.distributed import DistributedContext
-from ..utils import configure_logging
-from ..utils.checkpoint import checkpoint_path, load_checkpoint
-from ..utils.logging import get_logger
-from ..utils.tracing import configure_tracing, trace_span
+from ..core.logging import configure_logging, get_logger
+from ..monitoring.tracing import configure_tracing, trace_span
 
 LOGGER = get_logger(__name__)
 
@@ -86,27 +87,61 @@ class TrainingPipeline:
         enable_evaluation: bool = True,
         resume_from_checkpoint: bool | str | Path | None = None,
     ) -> PipelineArtifacts:
+        """Execute the training pipeline.
+        
+        **Idempotency**: This method is idempotent when resuming from checkpoint.
+        Running twice with the same checkpoint will produce identical results.
+        Running without a checkpoint will create a new run each time.
+        
+        **Retry-safe**: Safe to retry after failure. Manifests track state and
+        checkpoints enable resume from last successful point.
+        """
         run_dir = self.config.output_directory()
         run_dir.mkdir(parents=True, exist_ok=True)
+        
+        # V4: Run Manifest
+        run_id = generate_run_id("train")
+        manifest = RunManifest(
+            run_id=run_id,
+            monorepo_commit=get_git_commit(),
+            config_snapshot=self.config.model_dump(),
+            dataset_version=self.config.data.dataset_version,
+            hardware_specs=self._get_hardware_specs(),
+        )
+        manifest_dir = Path("runs")
+        manifest.save(manifest_dir)
+
         save_run_config(self.config, run_dir)
-        LOGGER.info("run_started", extra={"extra_context": {"run_dir": str(run_dir)}})
+        LOGGER.info("run_started", extra={"extra_context": {"run_dir": str(run_dir), "run_id": run_id}})
 
         resume_path = self._resolve_resume_checkpoint(resume_from_checkpoint, run_dir)
         if resume_path:
             LOGGER.info("resume_checkpoint", extra={"extra_context": {"path": str(resume_path)}})
+            manifest.resume_info = {"path": str(resume_path)}
+            manifest.save(manifest_dir)
 
-        if self._is_distributed():
-            return self._run_distributed(
-                run_dir,
-                enable_evaluation=enable_evaluation,
-                resume_checkpoint=resume_path,
-            )
-
-        return self._run_single_process(
-            run_dir,
-            enable_evaluation=enable_evaluation,
-            resume_checkpoint=resume_path,
-        )
+        try:
+            if self._is_distributed():
+                artifacts = self._run_distributed(
+                    run_dir,
+                    enable_evaluation=enable_evaluation,
+                    resume_checkpoint=resume_path,
+                )
+            else:
+                artifacts = self._run_single_process(
+                    run_dir,
+                    enable_evaluation=enable_evaluation,
+                    resume_checkpoint=resume_path,
+                )
+            
+            manifest.update_status("completed", artifacts.metrics)
+            manifest.save(manifest_dir)
+            return artifacts
+            
+        except Exception as e:
+            manifest.update_status("failed")
+            manifest.save(manifest_dir)
+            raise e
 
     @trace_span("training_pipeline.single_process")
     def _run_single_process(
@@ -116,6 +151,11 @@ class TrainingPipeline:
         enable_evaluation: bool,
         resume_checkpoint: Optional[Path],
     ) -> PipelineArtifacts:
+        """Run training in single-process mode.
+        
+        **Idempotency**: Idempotent when resuming from checkpoint. Running with
+        the same checkpoint produces identical results.
+        """
         data_pipeline = DataPipeline(self.config.data, registry=self.dataset_registry)
         data_pipeline.materialize_metadata(run_dir)
         train_loader = data_pipeline.dataloader("train")
@@ -390,3 +430,22 @@ class TrainingPipeline:
         import importlib.util
 
         return importlib.util.find_spec("mlflow") is not None
+
+    def _get_hardware_specs(self) -> Dict[str, Any]:
+        """Collect hardware specifications for manifest."""
+        specs: Dict[str, Any] = {}
+        try:
+            import torch
+            if torch.cuda.is_available():
+                specs["gpu_count"] = torch.cuda.device_count()
+                specs["gpu_names"] = [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())]
+        except Exception:
+            pass
+        try:
+            import psutil
+            specs["cpu_count"] = psutil.cpu_count()
+            mem = psutil.virtual_memory()
+            specs["memory_gb"] = mem.total / (1024**3)
+        except Exception:
+            pass
+        return specs

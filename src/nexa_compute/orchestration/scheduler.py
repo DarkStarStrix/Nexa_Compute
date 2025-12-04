@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from nexa_compute.core.logging import get_logger
 from nexa_compute.orchestration.workflow import WorkflowDefinition
-from nexa_compute.utils import get_logger
 
 LOGGER = get_logger(__name__)
 

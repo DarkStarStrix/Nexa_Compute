@@ -10,8 +10,8 @@ from typing import Dict, Iterable, List, Optional
 import torch.nn as nn
 
 from ..config.schema import CheckpointConfig
-from ..utils.checkpoint import save_checkpoint, checkpoint_path
-from ..utils.logging import get_logger
+from ..core.logging import get_logger
+from .checkpoint import checkpoint_path, save_checkpoint
 
 LOGGER = get_logger(__name__)
 

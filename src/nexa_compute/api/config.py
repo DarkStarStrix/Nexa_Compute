@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from nexa_compute.utils.secrets import get_secret_manager
+from nexa_compute.core.secrets import get_secret_manager
 
 
 class Settings(BaseSettings):

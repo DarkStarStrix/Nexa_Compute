@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from ..config.schema import EvaluationConfig
-from ..utils.logging import get_logger
+from ..core.logging import get_logger
 from .metrics import compute_metrics
 
 LOGGER = get_logger(__name__)

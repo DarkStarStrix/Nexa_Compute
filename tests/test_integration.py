@@ -153,7 +153,7 @@ class TestStorageIntegration:
     def test_storage_paths_integration(self, tmp_path, monkeypatch):
         """Test storage paths utility integration."""
         try:
-            from nexa_compute.utils.storage import get_storage, StoragePaths
+            from nexa_compute.core.storage import get_storage, StoragePaths
             
             # Set environment variables to use tmp_path
             monkeypatch.setenv("NEXA_SCRATCH", str(tmp_path / "scratch"))

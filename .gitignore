@@ -95,6 +95,9 @@ docs/TODAY_SUMMARY.md
 PRODUCTION_RUN_SUMMARY.md
 Data_Pipeline_Spec.md
 
+# Specs
+docs/Spec's/
+
 # repo 
 nexa_inference/checkpoints
 

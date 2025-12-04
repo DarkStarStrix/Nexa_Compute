@@ -1,4 +1,8 @@
-"""Model registry and reference architectures."""
+"""Model registry and reference architectures.
+
+Responsibility: Manages model definitions, registries, and reference implementations for 
+classification tasks (MLP, ResNet, Transformer).
+"""
 
 from .base import DEFAULT_MODEL_REGISTRY, ModelBuilder, ModelRegistry
 from .mlp import MLPClassifier

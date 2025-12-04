@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from nexa_compute.api.database import get_db
-from nexa_compute.utils.storage import get_storage
+from nexa_compute.core.storage import get_storage
 
 router = APIRouter()
 

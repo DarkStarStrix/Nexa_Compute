@@ -23,8 +23,6 @@ from nexa_compute.orchestration import TrainingPipeline  # type: ignore
 from nexa_compute.config import load_config  # type: ignore
 from nexa_compute.core.artifacts import ArtifactMeta, create_artifact  # type: ignore
 
-from .utils import save_run_manifest
-
 
 _DEF_CHECKPOINT_ARTIFACT_DIR = "artifacts/checkpoints"
 
@@ -38,13 +36,6 @@ def run_training_job(config_path: Path, overrides: Optional[List[str]] = None) -
     pipeline = TrainingPipeline(config)
     artifacts = pipeline.run()
 
-    manifest = {
-        "config": str(config_path),
-        "run_dir": str(artifacts.run_dir),
-        "metrics": artifacts.metrics,
-        "checkpoint": str(artifacts.checkpoint) if artifacts.checkpoint else None,
-    }
-    save_run_manifest(config.output_directory(), manifest)
     print(f"[nexa-train] run complete at {artifacts.run_dir}")
 
     artifact_dir = config.output_directory() / _DEF_CHECKPOINT_ARTIFACT_DIR

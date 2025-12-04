@@ -115,8 +115,14 @@ def list_artifacts(
                                 "uri": meta.get("uri", f"file://{item.absolute()}"),
                                 "created": meta.get("created_at", datetime.fromtimestamp(item.stat().st_mtime).isoformat())
                             })
-                        except:
-                            pass
+                        except Exception as exc:
+                            from nexa_compute.core.logging import get_logger
+                            logger = get_logger(__name__)
+                            logger.warning(
+                                "artifact_metadata_read_failed",
+                                extra={"path": str(item), "error": str(exc)},
+                            )
+                            continue
     
     # Sort by created date (newest first)
     artifacts.sort(key=lambda x: x["created"], reverse=True)

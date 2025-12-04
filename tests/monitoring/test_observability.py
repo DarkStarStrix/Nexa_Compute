@@ -14,7 +14,7 @@ from nexa_compute.monitoring.alerts import (
     send_alert,
 )
 from nexa_compute.monitoring.drift import DriftDetector
-from nexa_compute.utils.metrics import MetricsRegistry
+from nexa_compute.monitoring.metrics import MetricsRegistry
 
 @dataclass
 class MockBackend(AlertBackend):

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from nexa_compute.api.config import get_settings
 from nexa_compute.api.database import init_db
 from nexa_compute.api.endpoints import artifacts, auth, billing, health, jobs, metrics, workers, workflows
-from nexa_compute.utils.tracing import configure_tracing, instrument_app
+from nexa_compute.monitoring.tracing import configure_tracing, instrument_app
 
 settings = get_settings()
 
@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
         (artifacts_dir / subdir).mkdir(parents=True, exist_ok=True)
 
     if os.getenv("STORAGE_BACKEND", settings.STORAGE_BACKEND) == "local":
-        from nexa_compute.utils.storage import get_storage
+        from nexa_compute.core.storage import get_storage
 
         get_storage()
 

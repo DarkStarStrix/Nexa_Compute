@@ -21,7 +21,7 @@ from nexa_compute.core.artifacts import ArtifactMeta, create_artifact  # type: i
 from nexa_compute.evaluation import Evaluator  # type: ignore
 from nexa_compute.data import DataPipeline  # type: ignore
 from nexa_compute.models import DEFAULT_MODEL_REGISTRY  # type: ignore
-from nexa_compute.utils.checkpoint import load_checkpoint  # type: ignore
+from nexa_compute.training.checkpoint import load_checkpoint  # type: ignore
 
 
 _DEF_EVAL_ARTIFACT_DIR = "artifacts/eval"

@@ -6,15 +6,10 @@ warnings.filterwarnings("ignore", message=".*pynvml package is deprecated.*", ca
 
 import pytest
 
-from nexa_compute.utils import (
-    CircuitBreaker,
-    CircuitBreakerOpenError,
-    ExecutionTimeoutError,
-    RetryPolicy,
-    execution_timeout,
-    retry_call,
-)
-from nexa_compute.utils.secrets import SecretManager, SecretsConfig
+from nexa_compute.core.circuit_breaker import CircuitBreaker, CircuitBreakerOpenError
+from nexa_compute.core.retry import RetryPolicy, retry_call
+from nexa_compute.core.secrets import SecretManager, SecretsConfig
+from nexa_compute.core.timeout import ExecutionTimeoutError, execution_timeout
 from nexa_tools.sandbox import SandboxRunner
 
 

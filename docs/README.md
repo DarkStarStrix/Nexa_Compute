@@ -2,6 +2,8 @@
 
 **ML Lab in a Box** — A self-contained, production-grade machine learning research and development platform for rapid experimentation, model training, and knowledge distillation.
 
+**V4** introduces Rust-powered data pipelines, run manifests, and production-grade safety features for large-scale pretraining.
+
 ---
 
 ## Documentation Map
@@ -29,10 +31,18 @@ nexa_compute/
 ├── nexa_train/      # Model training and fine-tuning
 ├── nexa_eval/       # Evaluation and benchmarking
 ├── nexa_ui/         # Visualization and dashboards
-└── nexa_infra/      # Infrastructure and orchestration
+├── nexa_infra/      # Infrastructure and orchestration
+└── rust/            # Rust extensions (V4): data_core, data_quality, train_pack, stats
 ```
 
 Each module is self-contained with clear boundaries, communicating via versioned data artifacts rather than direct imports.
+
+**V4 Architecture Highlights:**
+- **Rust Extensions**: High-performance data pipelines (`nexa_data_core`, `nexa_data_quality`, `nexa_train_pack`, `nexa_stats`)
+- **Run Manifests**: Complete traceability for all operations
+- **Dataset Versioning**: Content-addressable storage with checksums
+- **Preflight Engine**: Pre-job validation and cost estimation
+- **Checkpoint & Resume**: Standardized training recovery protocol
 
 **See [Architecture Documentation](overview/ARCHITECTURE.md) for complete details.**
 
@@ -85,22 +95,22 @@ python orchestrate.py launch --config nexa_train/configs/baseline.yaml
 ## Core Modules
 
 ### [Nexa Data](pipelines/DATA.md) (`nexa_data/`)
-Data preparation, analysis, and automated feedback loops. Includes the MS/MS refinery and Tool Use protocol.
+Data preparation, analysis, and automated feedback loops. Includes the MS/MS refinery and Tool Use protocol. **V4**: Rust-powered preprocessing (`nexa_data_core`), quality filtering (`nexa_data_quality`), and sequence packing (`nexa_train_pack`).
 
 ### [Nexa Distill](pipelines/DISTILLATION.md) (`nexa_distill/`)
-Knowledge distillation pipeline. Transform raw data into high-quality training datasets.
+Knowledge distillation pipeline. Transform raw data into high-quality training datasets. **V4**: High-volume filtering and deduplication via Rust extensions.
 
 ### [Nexa Train](pipelines/TRAINING.md) (`nexa_train/`)
-Model training and fine-tuning with distributed support (Axolotl, HF Trainer).
+Model training and fine-tuning with distributed support (Axolotl, HF Trainer). **V4**: Run manifests, checkpoint/resume protocol, and cost guardrails.
 
 ### [Nexa Eval](pipelines/EVALUATION.md) (`nexa_eval/`)
-Comprehensive evaluation and benchmarking using LLM-as-a-Judge.
+Comprehensive evaluation and benchmarking using LLM-as-a-Judge. **V4**: Rust-powered statistics (`nexa_stats`) for drift detection and KS/PSI tests.
 
 ### [Nexa Inference](pipelines/INFERENCE.md) (`nexa_inference/`)
 Production-ready inference server (vLLM) and tool controller.
 
 ### [Nexa Infra](pipelines/INFRASTRUCTURE.md) (`nexa_infra/`)
-Cluster provisioning, job management, and orchestration.
+Cluster provisioning, job management, and orchestration. **V4**: Preflight engine for job validation.
 
 ---
 

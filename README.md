@@ -2,17 +2,18 @@
 
 **AI Infrastructure Platform with Managed API Service**
 
-[![Tests](https://img.shields.io/badge/tests-74%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-89%20passing-brightgreen)](tests/)
 [![Linting](https://img.shields.io/badge/linting-ruff%20%2B%20mypy-blue)](https://github.com/astral-sh/ruff)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.0-lightgrey)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-V4%20(0.4.0)-lightgrey)](pyproject.toml)
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Dependencies](https://img.shields.io/badge/dependencies-uv-purple)](https://github.com/astral-sh/uv)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg?style=flat&logo=FastAPI&logoColor=white)](https://fastapi.tiangolo.com)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=flat&logo=PyTorch&logoColor=white)](https://pytorch.org/)
 
-A complete AI foundry platform for orchestrating data generation, model distillation, training, and evaluation on ephemeral GPU compute.
+A complete AI foundry platform for orchestrating data generation, model distillation, training, and evaluation on ephemeral GPU compute. **V4 introduces Rust-powered data pipelines, run manifests, and production-grade safety features for large-scale pretraining.**
 
 ---
 
@@ -78,17 +79,22 @@ Nexa_compute/
 ├── nexa_inference/      # vLLM Serving & Tool Controller
 ├── nexa_infra/          # IaC (Terraform), Monitoring, Provisioning
 ├── nexa_ui/             # Dashboards (Streamlit/Next.js)
+├── rust/                # Rust Extensions (V4)
+│   ├── nexa_data_core/  # High-performance data preprocessing
+│   ├── nexa_data_quality/ # Data quality & filtering
+│   ├── nexa_train_pack/  # Sequence packing for pretraining
+│   └── nexa_stats/       # Statistical operations & drift detection
 ├── src/
 │   └── nexa_compute/
 │       ├── api/         # FastAPI backend
 │       ├── cli/         # CLI Entrypoint
-│       ├── core/        # Core Primitives (DAG, Registry, Artifacts)
-│       ├── data/        # DataOps (Versioning, Lineage)
+│       ├── core/        # Core Primitives (DAG, Registry, Artifacts, Manifests)
+│       ├── data/        # DataOps (Versioning, Lineage, Rust bindings)
 │       ├── models/      # ModelOps (Registry, Versioning)
 │       ├── monitoring/  # Observability (Alerts, Metrics, Drift)
 │       └── orchestration/ # Workflow Engine (Scheduler, Templates)
 ├── docs/
-│   ├── compute_plans/   # Training Configuration Templates (V1/V2/V3)
+│   ├── compute_plans/   # Training Configuration Templates (V1/V2/V3/V4)
 │   ├── pipelines/       # Detailed Architecture Docs
 │   ├── platform/        # Platform Guide & Best Practices
 │   ├── api/             # API Reference
@@ -101,8 +107,16 @@ Nexa_compute/
 
 ## Core Features
 
+### V4 Highlights 🚀
+- **Rust-Powered Data Pipelines**: High-performance, deterministic preprocessing with `nexa_data_core`, `nexa_data_quality`, `nexa_train_pack`, and `nexa_stats`.
+- **Run Manifest System**: Complete traceability with run manifests tracking configs, datasets, hardware, and metrics.
+- **Dataset Versioning**: Content-addressable storage with checksums and provenance tracking.
+- **Preflight Engine**: Pre-job validation for datasets, tokenizers, GPU memory, and cost estimates.
+- **Checkpoint & Resume**: Standardized checkpoint protocol with automatic resume discovery.
+- **Cost Guardrails**: Built-in limits for tokens, hours, and cost with graceful shutdown.
+
 ### Compute Engine
-- **Unified Training CLI**: `nexa_train/train.py` supports flexible overrides and configuration modes (V1 Stability, V2 Performance, V3 Full).
+- **Unified Training CLI**: `nexa_train/train.py` supports flexible overrides and configuration modes (V1 Stability, V2 Performance, V3 Full, V4 Production).
 - **Infrastructure as Code**: Terraform modules for AWS GPU clusters.
 - **Observability**: Distributed tracing (OpenTelemetry), Prometheus metrics, and real-time cost tracking.
 - **Automated Provisioning**: One-command deployment to bare metal or cloud instances with Spot instance support.
@@ -115,8 +129,9 @@ Nexa_compute/
 
 ### MLOps & DataOps
 - **Model Registry**: Full lineage tracking from dataset to deployed model.
-- **Data Versioning**: Content-addressable storage for datasets.
-- **Monitoring**: Automated drift detection and A/B testing framework.
+- **Data Versioning**: Content-addressable storage for datasets with manifest-based tracking.
+- **Monitoring**: Automated drift detection and A/B testing framework with Rust-powered statistics.
+- **Rust Extensions**: Zero-copy data transforms, deterministic shuffling, parallel batching, and high-volume filtering.
 
 ---
 
@@ -130,7 +145,7 @@ For detailed instructions on how the platform works and what each component does
 - **[Infrastructure Guide](docs/pipelines/INFRASTRUCTURE.md)**: Docker, Provisioning, and Hardware.
 - **[Training Pipeline](docs/pipelines/TRAINING.md)**: Configuration and Execution.
 - **[Data Refinery](docs/pipelines/DATA.md)**: MS/MS and Synthetic Data.
-- **[Compute Plans](docs/compute_plans/README.md)**: Run Configurations.
+- **[Compute Plans](docs/compute_plans/README.md)**: Run Configurations (V1/V2/V3/V4).
 
 ---
 
@@ -150,4 +165,4 @@ See **[docs/conventions/](docs/conventions/)** for:
 
 ---
 
-**Tags**: `machine-learning`, `distributed-training`, `infrastructure-as-code`, `mlops`, `knowledge-distillation`, `fastapi`, `pytorch`, `spectral-analysis`
+**Tags**: `machine-learning`, `distributed-training`, `infrastructure-as-code`, `mlops`, `knowledge-distillation`, `fastapi`, `pytorch`, `rust`, `spectral-analysis`, `pretraining`

@@ -1,300 +1,195 @@
-# Nexa Compute Architecture: How It Works
+# NexaCompute Architecture
 
-## Overview
+*High-level system architecture and module dependencies per Scaling Policy Section 8.*
 
-Nexa Compute is a distributed ML training platform with a **VPS control plane** orchestrating ephemeral **GPU workers** for data quality analysis, distillation, training, evaluation, and deployment.
+## System Overview
 
-## Architecture Diagram
+NexaCompute is a modular monorepo organized as a **directed acyclic graph (DAG)**. The system follows strict module specialization with clear language boundaries and versioned contracts.
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER                                     │
-│                  (Python SDK / HTTP API)                         │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              DIGITALOCEAN VPS (Control Plane)                    │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  FastAPI Server (src/nexa/api.py)                        │  │
-│  │  - Job Queue (in-memory / Redis)                         │  │
-│  │  - Worker Registry (tracks GPU workers)                  │  │
-│  │  - Job Dispatcher (routes jobs to workers)               │  │
-│  │  - Storage Backend (S3/DO Spaces)                        │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Local Worker Thread                                     │  │
-│  │  - Processes lightweight jobs (audit, evaluate)          │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ SSH + Job Dispatch
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│         PRIME INTELLECT GPU WORKER (Ephemeral)                   │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Remote Worker Agent (future: src/workers/remote_worker) │  │
-│  │  - Polls VPS for jobs                                    │  │
-│  │  - Executes training/distillation                        │  │
-│  │  - Streams logs back to VPS                              │  │
-│  │  - Uploads artifacts to S3/DO Spaces                     │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  GPU: 1x A100-40GB                                               │
-│  Status: idle → busy → idle                                      │
-└──────────────────────────────────────────────────────────────────┘
+## Module Dependency Graph
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Core Infrastructure                      │
+│  (core: logging, storage, retry, secrets, manifests)        │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ (depends on)
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Domain Modules                           │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │   Data   │→ │  Models  │→ │ Training │→ │Evaluation│  │
+│  │          │  │          │  │          │  │          │  │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ (orchestrates)
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Orchestration Layer                        │
+│  (orchestration: pipeline wiring, workflow engine)          │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ (monitors)
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Cross-Cutting Systems                     │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ Monitoring   │  │     API      │  │    Config    │     │
+│  │ (tracing,    │  │  (FastAPI,   │  │  (loaders,   │     │
+│  │  metrics,    │  │   endpoints) │  │   schemas)   │     │
+│  │  alerts)     │  │              │  │              │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Component Breakdown
+## Core Flow (DAG)
 
-### 1. VPS Control Plane (DigitalOcean)
+The primary data flow follows this DAG:
 
-**Purpose:** Central orchestration hub that manages jobs, workers, and artifacts.
-
-**Key Components:**
-
-- **FastAPI Server** (`src/nexa/api.py`): REST API for job submission, status, worker management
-- **Worker Registry** (`src/infra/workers/registry.py`): Tracks all GPU workers (SSH host, GPU count, status, heartbeat)
-- **Job Dispatcher** (`src/infra/workers/dispatcher.py`): Routes jobs to available workers via SSH
-- **Storage Backend** (`src/infra/storage/backends.py`): Uploads/downloads artifacts to/from S3/DO Spaces
-- **Config Loader** (`src/server/config.py`): Loads API keys, credentials from `.env`
-
-**Responsibilities:**
-
-- Accept job requests from users
-- Maintain worker pool (register, heartbeat, teardown)
-- Dispatch GPU-intensive jobs to remote workers
-- Process lightweight jobs locally (audit, evaluate)
-- Store and retrieve artifacts (datasets, checkpoints, logs)
-
-### 2. GPU Worker (Prime Intellect)
-
-**Purpose:** Ephemeral compute node for heavy ML workloads (training, distillation).
-
-**Lifecycle:**
-
-1. **Provisioning:** User gets SSH credentials from Prime Intellect
-2. **Registration:** User calls `POST /workers/register` with SSH host
-3. **Bootstrap:** VPS SSHs into worker, installs dependencies, clones repo
-4. **Ready:** Worker status → `idle`, ready to accept jobs
-5. **Execution:** Receives job via SSH, executes, uploads results
-6. **Teardown:** After idle timeout, worker is terminated
-
-**Key Components:**
-
-- **SSH Bootstrap** (`src/infra/provisioning/ssh_bootstrap.py`): Automated setup script
-- **SSH Executor** (`src/infra/workers/ssh_executor.py`): Remote command execution
-- **Remote Worker Agent** (future): Daemon that polls VPS for jobs
-
-### 3. Storage Layer (DigitalOcean Spaces / AWS S3)
-
-**Purpose:** Persistent artifact storage accessible by VPS and workers.
-
-**Artifact Types:**
-
-- **Datasets:** Input data for training (`.jsonl`, `.parquet`)
-- **Checkpoints:** Trained model weights (`.pt`, `.safetensors`)
-- **Logs:** Training logs, metrics (`.log`, `.json`)
-- **Evaluations:** Evaluation results, reports (`.json`)
-
-**Flow:**
-
-1. User uploads dataset → S3
-2. VPS dispatches job with S3 URI
-3. Worker downloads dataset from S3
-4. Worker trains model, uploads checkpoint to S3
-5. User downloads checkpoint from S3
-
-## Job Flow: End-to-End
-
-### Example: Training Job
-
-```text
-1. USER → VPS
-   POST /train {"dataset_id": "my_data", "model": "gpt2", "epochs": 1}
-   Response: {"job_id": "job_train_abc123"}
-
-2. VPS → Worker Registry
-   Check for available worker with GPU
-   - If available: Dispatch to worker
-   - If not: Provision new worker (future) or mark as "provisioning_worker"
-
-3. VPS → GPU Worker (via SSH)
-   Upload job spec: /workspace/tmp/jobs/job_train_abc123.json
-   Execute: python3 -m src.workers.remote_worker execute --job-spec ...
-
-4. GPU Worker → S3
-   Download dataset from S3 URI
-   Load into memory
-
-5. GPU Worker → Training
-   Execute training loop
-   Log metrics, GPU stats
-   Stream logs back to VPS (future)
-
-6. GPU Worker → S3
-   Upload checkpoint to S3
-   Upload logs to S3
-
-7. GPU Worker → VPS
-   Report job completion
-   Update job status: "completed"
-   Release worker: status → "idle"
-
-8. USER → VPS
-   GET /status/job_train_abc123
-   Response: {"status": "completed", "result": {"checkpoint_uri": "s3://..."}}
-
-9. USER → S3
-   Download checkpoint from S3 URI
+```
+nexa_data → nexa_distill → nexa_train → nexa_eval → nexa_inference
 ```
 
-## Job Routing Logic
+### Module Responsibilities
 
-```python
-# In src/nexa/api.py
+#### `core/` - Core Infrastructure
+**Responsibility**: Provides foundational primitives (logging, storage, retry, secrets, manifests, circuit breakers, timeouts) used across all NexaCompute modules.
 
-def _create_job(job_type: str, payload: dict, run_local: bool = False):
-    if run_local:
-        # Lightweight jobs: audit, evaluate
-        job_queue.put(job_id)  # Local worker thread
-    else:
-        # GPU-intensive jobs: train, distill
-        worker = worker_registry.get_available_worker(gpu_requirement=1)
-        if worker:
-            job_dispatcher.dispatch_to_worker(job, worker)
-        else:
-            # No workers available
-            job["status"] = "provisioning_worker"
-            # Future: Auto-provision from Prime Intellect
-```
+**Dependencies**: None (foundation layer)
 
-## Worker Registration Flow
+**Exports**: 
+- `RunManifest`, `get_git_commit` - Run tracking
+- `StoragePaths`, `get_storage` - Storage management
+- `RetryPolicy`, `retry_call` - Resilience patterns
+- `SecretManager`, `get_secret` - Secrets management
+- `configure_logging`, `get_logger` - Logging infrastructure
+- `CircuitBreaker`, `execution_timeout` - Execution control
 
-```text
-1. USER → Prime Intellect
-   Provision GPU instance
-   Receive: SSH host, user, key
+#### `data/` - Data Operations
+**Responsibility**: Manages dataset lifecycle including ingestion, versioning, quality filtering, statistical analysis, and integration with Rust-powered preprocessing engines.
 
-2. USER → VPS
-   POST /workers/register {
-     "ssh_host": "192.168.1.100",
-     "ssh_user": "root",
-     "gpu_count": 1,
-     "gpu_type": "A100-40GB"
-   }
+**Dependencies**: `core/` (for logging, storage, manifests)
 
-3. VPS → GPU Worker (SSH)
-   a. Connect via SSH
-   b. Upload bootstrap script
-   c. Execute: install deps, clone repo, setup env
-   d. Verify: python3 -c "import torch; print(torch.cuda.is_available())"
+**Rust Integration**: 
+- `nexa_data_core` - High-performance data transforms
+- `nexa_data_quality` - Quality filtering and deduplication
+- `nexa_stats` - Statistical operations
+- `nexa_train_pack` - Sequence packing for pretraining
 
-4. VPS → Worker Registry
-   Register worker with ID: "worker-abc123"
-   Status: "bootstrapping" → "idle"
+#### `models/` - Model Registry
+**Responsibility**: Manages model definitions, registries, and reference implementations for classification tasks (MLP, ResNet, Transformer).
 
-5. VPS → USER
-   Response: {"worker_id": "worker-abc123", "status": "bootstrapping"}
+**Dependencies**: `core/` (for logging)
 
-6. Background Thread
-   Monitor bootstrap progress
-   Update worker status when ready
-```
+#### `training/` - Training Engine
+**Responsibility**: Orchestrates model training workflows including checkpointing, distributed execution, training callbacks, loss smoothing, and deterministic seeding.
 
-## Security & Communication
+**Dependencies**: `core/`, `models/`, `data/`
 
-### SSH Authentication
+**Key Components**:
+- `Trainer` - Training loop implementation
+- `checkpoint` - Checkpoint save/load (idempotent)
+- `distributed` - Distributed training coordination
+- `callbacks` - Training lifecycle hooks
+- `seed` - Deterministic seeding
+- `smoothing` - Loss smoothing utilities
 
-- **VPS → Worker:** Uses SSH key (configured in `.env` or per-worker)
-- **Strict Host Checking:** Disabled for ephemeral workers
-- **Key Management:** User provides SSH key path during registration
+#### `evaluation/` - Evaluation Engine
+**Responsibility**: Executes model evaluation workflows including metric computation, prediction saving, and generation of evaluation reports and visualizations.
 
-### API Authentication (Future)
+**Dependencies**: `core/`, `models/`, `data/`
 
-- **API Keys:** User authenticates with API key
-- **JWT Tokens:** Session management
-- **Rate Limiting:** Prevent abuse
+#### `orchestration/` - Pipeline Orchestration
+**Responsibility**: Wires together config, data, models, training, and evaluation into complete end-to-end training pipelines with manifest tracking and distributed execution support.
 
-### Network Communication
+**Dependencies**: All domain modules (`data/`, `models/`, `training/`, `evaluation/`), `core/`
 
-- **VPS → Worker:** SSH (port 22)
-- **Worker → S3:** HTTPS (port 443)
-- **User → VPS:** HTTP/HTTPS (port 8000)
+**Key Components**:
+- `TrainingPipeline` - End-to-end pipeline (idempotent with checkpoints)
+- `scheduler` - Workflow scheduling
+- `workflow` - DAG-based workflow definitions
 
-## Scalability & Cost Optimization
+#### `monitoring/` - Observability
+**Responsibility**: Provides observability infrastructure including distributed tracing, Prometheus metrics, GPU monitoring, and alerting systems for production operations.
 
-### Worker Auto-Scaling (Future)
+**Dependencies**: `core/` (for logging, retry)
 
-- **Auto-Provision:** When job queue > threshold, provision new worker
-- **Auto-Teardown:** When worker idle > 10 minutes, terminate
-- **Cost Tracking:** Monitor GPU hours, estimate costs
+**Key Components**:
+- `tracing` - OpenTelemetry distributed tracing
+- `metrics` - Prometheus metrics export
+- `gpu_monitor` - GPU telemetry
+- `alerts` - Alert routing and delivery
 
-### Job Prioritization (Future)
+#### `config/` - Configuration Management
+**Responsibility**: Loads, validates, and manages training configuration files with override support and schema validation using Pydantic.
 
-- **Priority Queue:** High-priority jobs get workers first
-- **Job Batching:** Combine small jobs to maximize GPU utilization
+**Dependencies**: None (foundation)
 
-### Caching
+#### `api/` - Nexa Forge API
+**Responsibility**: Provides FastAPI-based REST API for job management, worker orchestration, artifact storage, billing, and workflow execution in the Nexa Forge managed service.
 
-- **Dataset Caching:** Cache frequently used datasets on workers
-- **Model Caching:** Cache base models (e.g., GPT-2) to avoid re-downloads
+**Dependencies**: `core/`, `monitoring/`, `orchestration/`
 
-## Monitoring & Observability
+## Language Boundaries
 
-### Logs
+### Python - Orchestration Layer
+- **Responsibility**: Control flow, CLI/TUI, configs & manifests, pipeline wiring, API server logic, high-level glue
+- **Must NOT**: Implement heavy data transforms or CPU-bound loops
+- **Delegates to**: Rust modules for compute-heavy operations
 
-- **VPS Logs:** FastAPI access logs, job dispatch logs
-- **Worker Logs:** Training logs, GPU metrics, errors
-- **Centralized Logging:** Stream all logs to VPS (future)
+### Rust - Kernel Layer  
+- **Responsibility**: Deterministic data transforms, high-volume CPU-bound operations, packing, gating, shuffling, statistical computations, scientific preprocessing
+- **Location**: `rust/nexa_data_core/`, `rust/nexa_data_quality/`, `rust/nexa_stats/`, `rust/nexa_train_pack/`
+- **Interface**: Clean FFI boundaries via Python wrappers in `src/nexa_compute/data/rust_*.py`
 
-### Metrics
+### Bash - Environment Layer
+- **Responsibility**: Environment setup, tmux wrappers, trivial glue commands
+- **Location**: `nexa_infra/scripts/`
+- **Must NOT**: Contain core logic or branching/computation
 
-- **Job Metrics:** Success rate, average duration, queue depth
-- **Worker Metrics:** GPU utilization, memory usage, uptime
-- **Cost Metrics:** GPU hours, storage usage, API calls
+## Versioned Contracts
 
-### Alerts (Future)
+The following interfaces are versioned and stable:
 
-- **Worker Down:** Alert when worker misses heartbeat
-- **Job Failed:** Alert when job fails
-- **Cost Threshold:** Alert when costs exceed budget
+- **Run Manifests** (`core/manifests.py::RunManifest`) - V4 schema
+- **Dataset Manifests** (`data/versioning.py::DatasetVersion`) - Content-addressable storage
+- **Config Schemas** (`config/schema.py::TrainingConfig`) - Pydantic models
+- **Rust ABI Boundaries** - FFI interfaces in `data/rust_*.py`
+- **Storage Paths** (`core/storage.py::StoragePaths`) - Storage policy
 
-## Technology Stack
+## Idempotency Guarantees
 
-### VPS (Control Plane)
+### Idempotent Operations
+- **Pipeline execution** (`orchestration/pipeline.py::TrainingPipeline.run`) - Idempotent when resuming from checkpoint
+- **Metadata materialization** (`data/pipeline.py::DataPipeline.materialize_metadata`) - Always produces same output
+- **Checkpoint saving** (`training/checkpoint.py::save_checkpoint`) - Overwrites safely
+- **Manifest operations** (`core/manifests.py::RunManifest.save`) - Safe to call multiple times
 
-- **OS:** Ubuntu 22.04
-- **Runtime:** Python 3.11
-- **Framework:** FastAPI + Uvicorn
-- **Storage:** DigitalOcean Spaces (S3-compatible)
-- **Database:** In-memory (Redis in production)
+### Non-Idempotent Operations
+- **Training without checkpoint** - Creates new run each time
+- **Dataset generation** - May produce different samples
 
-### GPU Worker
+## Dependency Rules
 
-- **OS:** Ubuntu 22.04
-- **GPU:** NVIDIA A100 40GB (or H100)
-- **CUDA:** 12.1
-- **PyTorch:** 2.2+
-- **Storage:** Local SSD (ephemeral)
+1. **Core modules** (`core/`, `config/`) have no dependencies on domain modules
+2. **Domain modules** (`data/`, `models/`, `training/`, `evaluation/`) depend only on `core/`
+3. **Orchestration** depends on all domain modules
+4. **Cross-cutting** (`monitoring/`, `api/`) depend downward only
+5. **No cycles** - Dependency graph is acyclic
 
-### Communication
+## Mental Model
 
-- **SSH:** OpenSSH 8.9+
-- **HTTP:** FastAPI REST API
-- **Storage:** boto3 (S3 SDK)
+To understand NexaCompute:
 
-## Future Enhancements
+1. **Start with `core/`** - Foundation primitives
+2. **Follow data flow** - `data/` → `models/` → `training/` → `evaluation/`
+3. **Understand orchestration** - `orchestration/` wires everything together
+4. **Observe cross-cutting** - `monitoring/` and `api/` provide operational capabilities
+5. **Check Rust boundaries** - Heavy compute lives in `rust/` with Python wrappers
 
-1. **Remote Worker Agent:** Daemon on GPU worker that polls VPS for jobs
-2. **Prime Intellect API Integration:** Auto-provision workers via API
-3. **WebSocket Log Streaming:** Real-time log streaming to user
-4. **Job Scheduling:** Cron-like scheduling for recurring jobs
-5. **Multi-GPU Support:** Distribute training across multiple GPUs
-6. **Fault Tolerance:** Retry failed jobs, checkpoint recovery
-7. **Web UI:** Dashboard for monitoring jobs, workers, costs
-
----
-
-**Last Updated:** 2025-11-20  
-**Architecture Version:** 0.2.0
+If you can't draw this architecture, it's too complex (per Scaling Policy Section 8).

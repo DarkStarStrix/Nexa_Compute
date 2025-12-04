@@ -10,8 +10,9 @@ from typing import BaseException, Dict, Iterable, List, Optional, Sequence
 
 import requests
 
+from nexa_compute.core.circuit_breaker import CircuitBreaker, CircuitBreakerOpenError
 from nexa_compute.core.exceptions import NexaError, NonRetryableError, RetryableError
-from nexa_compute.utils import CircuitBreaker, CircuitBreakerOpenError, RetryPolicy, retry_call
+from nexa_compute.core.retry import RetryPolicy, retry_call
 
 LOGGER = logging.getLogger(__name__)
 

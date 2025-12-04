@@ -14,8 +14,8 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 
 from ..config.schema import DistributedConfig
-from ..utils.logging import get_logger
-from ..utils.retry import RetryPolicy, retry_call
+from ..core.logging import get_logger
+from ..core.retry import RetryPolicy, retry_call
 
 LOGGER = get_logger(__name__)
 _DIST_INIT_POLICY = RetryPolicy(

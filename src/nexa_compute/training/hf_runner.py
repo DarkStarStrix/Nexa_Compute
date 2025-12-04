@@ -33,8 +33,8 @@ SRC = REPO_ROOT / "src"
 if SRC.exists() and str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from nexa_compute.utils.storage import generate_run_id, get_storage
-from nexa_compute.utils.smoothing import LossTracker
+from nexa_compute.core.storage import generate_run_id, get_storage
+from nexa_compute.training.smoothing import LossTracker
 
 
 MODEL_CHOICES = [
